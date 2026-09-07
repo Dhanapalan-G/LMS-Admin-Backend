@@ -1,0 +1,12 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsString } from 'class-validator';
+
+export class RefreshTokenDto {
+  @ApiProperty({
+    example: 'eyJhbGciOiJIUzI1NiIs...',
+    description: 'Refresh token returned after successful OTP verification',
+  })
+  @IsString()
+  @IsNotEmpty()
+  refreshToken: string;
+}
