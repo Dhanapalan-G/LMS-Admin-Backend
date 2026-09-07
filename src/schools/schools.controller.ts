@@ -1,5 +1,14 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
   ApiBody,
   ApiOperation,
   ApiParam,
@@ -9,16 +18,23 @@ import {
 } from '@nestjs/swagger';
 
 import { CreateSchoolDto } from './dto/create-school.dto';
-import { SchoolResponseDto } from './dto/school-response.dto';
 import { SchoolsService } from './schools.service';
 import { PaginationDto } from '../common/dto/pagination.dto';
 
-@ApiTags('Schools')
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../generated/prisma/client';
+
+@ApiTags('Admin - Schools')
+@ApiBearerAuth('access-token')
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('api/v1/schools')
 export class SchoolsController {
   constructor(private readonly schoolsService: SchoolsService) {}
 
   @Post()
+  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
   @ApiOperation({
     summary: 'Create a school',
     description: 'Creates a new school with a unique school code.',
@@ -46,6 +62,14 @@ export class SchoolsController {
     description: 'Invalid request data.',
   })
   @ApiResponse({
+    status: 401,
+    description: 'Unauthorized. Access token is missing or invalid.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden. User does not have permission.',
+  })
+  @ApiResponse({
     status: 409,
     description: 'School code already exists.',
     schema: {
@@ -60,6 +84,7 @@ export class SchoolsController {
   }
 
   @Get()
+  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
   @ApiOperation({
     summary: 'Get all schools',
     description: 'Returns a paginated list of schools.',
@@ -92,16 +117,11 @@ export class SchoolsController {
               name: 'St. Xavier School',
               code: 'SXS001',
             },
-            {
-              id: 'school-id-2',
-              name: 'ABC Higher Secondary School',
-              code: 'ABC001',
-            },
           ],
           meta: {
             page: 1,
             limit: 10,
-            total: 2,
+            total: 1,
             totalPages: 1,
             hasNextPage: false,
             hasPreviousPage: false,
@@ -110,15 +130,24 @@ export class SchoolsController {
       },
     },
   })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized. Access token is missing or invalid.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden. User does not have permission.',
+  })
   async findAll(@Query() paginationDto: PaginationDto) {
     return this.schoolsService.findAll(paginationDto);
   }
 
   @Get(':id')
+  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
   @ApiOperation({
     summary: 'Get school by ID',
     description:
-      'Returns a school by ID, including the number of users and courses associated with the school.',
+      'Returns school details including the number of users and courses.',
   })
   @ApiParam({
     name: 'id',
@@ -144,6 +173,14 @@ export class SchoolsController {
         },
       },
     },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized. Access token is missing or invalid.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden. User does not have permission.',
   })
   @ApiResponse({
     status: 404,

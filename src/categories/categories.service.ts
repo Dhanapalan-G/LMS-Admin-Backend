@@ -8,6 +8,7 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { CategoryStatus } from '../generated/prisma/enums';
+import { isUUID } from 'class-validator';
 
 @Injectable()
 export class CategoriesService {
@@ -81,13 +82,15 @@ export class CategoriesService {
     };
   }
   async findOne(id: string) {
+    if (!isUUID(id)) {
+      throw new NotFoundException('Category not found');
+    }
     const category = await this.prisma.category.findUnique({
       where: {
         id,
       },
       select: this.categorySelect,
     });
-
     if (!category) {
       throw new NotFoundException('Category not found');
     }
