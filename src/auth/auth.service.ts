@@ -2,30 +2,24 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
 import { PrismaService } from '../prisma/prisma.service';
-import { UserRole } from '../generated/prisma/client';
 import { OtpService } from './services/otp.service';
+import { TokenService } from './services/token.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly otpService: OtpService,
+    private readonly tokenService: TokenService,
   ) {}
 
-  async loginAdmin(email: string, password: string) {
-    return this.login(email, password, [
-      UserRole.ADMIN,
-      UserRole.PRINCIPAL,
-      UserRole.FACULTY,
-    ]);
-  }
-
-  async login(email: string, password: string, allowedRoles?: UserRole[]) {
+  async login(email: string, password: string) {
     const user = await this.prisma.user.findUnique({
       where: {
         email,
       },
     });
+
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
     }
@@ -34,29 +28,20 @@ export class AuthService {
       throw new UnauthorizedException('User account is inactive');
     }
 
-    if (allowedRoles && !allowedRoles.includes(user.role)) {
-      throw new UnauthorizedException(
-        'You are not authorized to access this application',
-      );
-    }
-
     const passwordValid = await bcrypt.compare(password, user.password);
 
     if (!passwordValid) {
       throw new UnauthorizedException('Invalid email or password');
     }
+
     const otp = await this.otpService.createLoginOtp(user.id);
 
     return {
-      otpRequired: true,
       verificationId: otp.verificationId,
       otp: otp.otp,
-      otpExpiresIn: otp.expiresIn,
+      expiresIn: otp.expiresIn,
+      message: 'OTP sent successfully',
     };
-  }
-
-  async loginLearner(email: string, password: string) {
-    return this.login(email, password, [UserRole.LEARNER]);
   }
 
   async getProfile(userId: string) {

@@ -35,7 +35,7 @@ export class AdminCategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({
     summary: 'Create category',
     description: 'Creates a new category.',
@@ -65,7 +65,7 @@ export class AdminCategoriesController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({
     summary: 'Get all categories',
     description: 'Returns a paginated list of categories.',
@@ -87,7 +87,7 @@ export class AdminCategoriesController {
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({
     summary: 'Get category by ID',
     description: 'Returns a category using its ID.',
@@ -114,7 +114,7 @@ export class AdminCategoriesController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({
     summary: 'Update category',
     description: 'Updates an existing category.',
@@ -151,7 +151,7 @@ export class AdminCategoriesController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({
     summary: 'Deactivate category',
     description: 'Deactivates an existing category.',

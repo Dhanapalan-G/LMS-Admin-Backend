@@ -36,7 +36,7 @@ export class AuthUserDto {
 
   @ApiProperty({
     enum: UserRole,
-    example: UserRole.ADMIN,
+    example: UserRole.SUPER_ADMIN
   })
   role: UserRole;
 

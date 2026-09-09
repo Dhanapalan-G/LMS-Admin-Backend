@@ -1,5 +1,8 @@
 -- CreateEnum
-CREATE TYPE "UserRole" AS ENUM ('ADMIN', 'PRINCIPAL', 'FACULTY', 'LEARNER');
+CREATE TYPE "UserRole" AS ENUM ('SUPER_ADMIN', 'SCHOOL_ADMIN', 'LEARNER');
+
+-- CreateEnum
+CREATE TYPE "LearnerType" AS ENUM ('PRINCIPAL', 'COMPARTMENT_HEAD', 'PRIME_MEMBER', 'TEACHER', 'NON_TEACHING_STAFF', 'STUDENT');
 
 -- CreateEnum
 CREATE TYPE "OtpPurpose" AS ENUM ('LOGIN');
@@ -46,9 +49,14 @@ CREATE TABLE "User" (
     "schoolId" TEXT,
     "name" TEXT NOT NULL,
     "email" TEXT NOT NULL,
+    "phone" TEXT,
     "password" TEXT NOT NULL,
     "role" "UserRole" NOT NULL,
+    "learnerType" "LearnerType",
     "employeeId" TEXT,
+    "board" TEXT,
+    "department" TEXT,
+    "dateOfJoining" TIMESTAMP(3),
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -340,6 +348,12 @@ CREATE INDEX "User_schoolId_idx" ON "User"("schoolId");
 
 -- CreateIndex
 CREATE INDEX "User_role_idx" ON "User"("role");
+
+-- CreateIndex
+CREATE INDEX "User_learnerType_idx" ON "User"("learnerType");
+
+-- CreateIndex
+CREATE INDEX "User_department_idx" ON "User"("department");
 
 -- CreateIndex
 CREATE INDEX "OtpVerification_userId_idx" ON "OtpVerification"("userId");

@@ -22,6 +22,14 @@ export class CategoriesService {
   };
 
   async create(createCategoryDto: CreateCategoryDto) {
+    // if (user.role === UserRole.SUPER_ADMIN) {
+    //   schoolId = dto.schoolId;
+    // }
+
+    // if (!schoolId) {
+    //   throw new BadRequestException('School is required');
+    // }
+
     const existingCategory = await this.prisma.category.findUnique({
       where: {
         name: createCategoryDto.name,
@@ -81,6 +89,7 @@ export class CategoriesService {
       },
     };
   }
+
   async findOne(id: string) {
     if (!isUUID(id)) {
       throw new NotFoundException('Category not found');

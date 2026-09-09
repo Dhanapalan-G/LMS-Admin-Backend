@@ -19,7 +19,7 @@ export class UserResponseDto {
 
   @ApiProperty({
     enum: UserRole,
-    example: UserRole.FACULTY,
+    example: UserRole.LEARNER,
   })
   role: UserRole;
 

@@ -1,10 +1,6 @@
-import {
-  BadRequestException,
-  HttpException,
-  HttpStatus,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -25,6 +21,7 @@ export class OtpService {
         userId,
         purpose: 'LOGIN',
         verifiedAt: null,
+        revokedAt: null,
         expiresAt: {
           gt: new Date(),
         },
@@ -39,16 +36,29 @@ export class OtpService {
         (Date.now() - existingOtp.lastSentAt.getTime()) / 1000;
 
       if (secondsSinceLastSent < this.resendCooldownSeconds) {
-        throw new HttpException(
+        throw new BadRequestException(
           `Please wait ${Math.ceil(
             this.resendCooldownSeconds - secondsSinceLastSent,
           )} seconds before requesting another OTP`,
-          HttpStatus.TOO_MANY_REQUESTS,
         );
       }
     }
 
+    // Revoke previous OTPs
+    await this.prisma.otpVerification.updateMany({
+      where: {
+        userId,
+        purpose: 'LOGIN',
+        verifiedAt: null,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+
     const otp = this.generateOtp();
+
     const codeHash = await bcrypt.hash(otp, 10);
 
     const expiresAt = new Date(Date.now() + this.otpExpiryMinutes * 60 * 1000);
@@ -65,45 +75,14 @@ export class OtpService {
       },
     });
 
-    /*
-     * Temporary development implementation.
-     *
-     * Later this will be replaced by Email/SMS provider.
-     */
+    // Development only.
+    console.log(`LOGIN OTP for ${userId}: ${otp}`);
+
     return {
       verificationId: verification.id,
-      otp: otp,
+      otp,
       expiresIn: this.otpExpiryMinutes * 60,
     };
-  }
-
-  async resendOtp(verificationId: string) {
-    const verification = await this.prisma.otpVerification.findUnique({
-      where: {
-        id: verificationId,
-      },
-    });
-
-    if (!verification) {
-      throw new BadRequestException('Invalid OTP verification request');
-    }
-
-    if (verification.verifiedAt) {
-      throw new BadRequestException('OTP has already been verified');
-    }
-
-    const secondsSinceLastSent =
-      (Date.now() - verification.lastSentAt.getTime()) / 1000;
-
-    if (secondsSinceLastSent < this.resendCooldownSeconds) {
-      throw new BadRequestException(
-        `Please wait ${Math.ceil(
-          this.resendCooldownSeconds - secondsSinceLastSent,
-        )} seconds before requesting another OTP`,
-      );
-    }
-
-    return this.createLoginOtp(verification.userId);
   }
 
   async verifyOtp(verificationId: string, otp: string) {
@@ -112,8 +91,13 @@ export class OtpService {
         id: verificationId,
       },
     });
+
     if (!verification) {
       throw new BadRequestException('Invalid OTP verification request');
+    }
+
+    if (verification.revokedAt) {
+      throw new BadRequestException('OTP is no longer valid');
     }
 
     if (verification.verifiedAt) {
@@ -127,8 +111,10 @@ export class OtpService {
     if (verification.attempts >= verification.maxAttempts) {
       throw new BadRequestException('Maximum OTP attempts exceeded');
     }
-    const isValid = await bcrypt.compare(otp, verification.codeHash);
-    if (!isValid) {
+
+    const valid = await bcrypt.compare(otp, verification.codeHash);
+
+    if (!valid) {
       await this.prisma.otpVerification.update({
         where: {
           id: verification.id,
@@ -161,6 +147,7 @@ export class OtpService {
         name: true,
         email: true,
         role: true,
+        learnerType: true,
         schoolId: true,
         isActive: true,
       },
@@ -169,6 +156,36 @@ export class OtpService {
     if (!user || !user.isActive) {
       throw new BadRequestException('User account is inactive');
     }
+
     return user;
+  }
+
+  async resendOtp(verificationId: string) {
+    const verification = await this.prisma.otpVerification.findUnique({
+      where: {
+        id: verificationId,
+      },
+    });
+
+    if (!verification) {
+      throw new BadRequestException('Invalid OTP verification request');
+    }
+
+    if (verification.verifiedAt || verification.revokedAt) {
+      throw new BadRequestException('OTP is no longer active');
+    }
+
+    const secondsSinceLastSent =
+      (Date.now() - verification.lastSentAt.getTime()) / 1000;
+
+    if (secondsSinceLastSent < this.resendCooldownSeconds) {
+      throw new BadRequestException(
+        `Please wait ${Math.ceil(
+          this.resendCooldownSeconds - secondsSinceLastSent,
+        )} seconds before requesting another OTP`,
+      );
+    }
+
+    return this.createLoginOtp(verification.userId);
   }
 }

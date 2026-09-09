@@ -42,7 +42,7 @@ export class AdminModulesController {
   constructor(private readonly modulesService: ModulesService) {}
 
   @Post('courses/:courseId/modules')
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({
     summary: 'Create a module inside a course',
     description:
@@ -96,7 +96,7 @@ export class AdminModulesController {
   }
 
   @Get('courses/:courseId/modules')
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({
     summary: 'Get all modules of a course',
     description:
@@ -156,7 +156,7 @@ export class AdminModulesController {
   }
 
   @Patch('modules/:id')
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({
     summary: 'Update a module',
     description:
@@ -206,7 +206,7 @@ export class AdminModulesController {
   }
 
   @Delete('modules/:id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({
     summary: 'Delete a module',
     description:

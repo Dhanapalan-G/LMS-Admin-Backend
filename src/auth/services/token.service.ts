@@ -1,11 +1,11 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as crypto from 'crypto';
+
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class TokenService {
-  private readonly accessTokenExpiresIn = '15m';
   private readonly refreshTokenDays = 30;
 
   constructor(
@@ -17,17 +17,18 @@ export class TokenService {
     id: string;
     email: string;
     role: string;
+    learnerType?: string | null;
     schoolId: string | null;
   }) {
     const payload = {
       sub: user.id,
       email: user.email,
       role: user.role,
+      learnerType: user.learnerType ?? null,
       schoolId: user.schoolId,
     };
-    const accessToken = await this.jwtService.signAsync(payload, {
-      expiresIn: this.accessTokenExpiresIn,
-    });
+
+    const accessToken = await this.jwtService.signAsync(payload);
 
     const refreshToken = crypto.randomBytes(64).toString('hex');
 
@@ -83,6 +84,7 @@ export class TokenService {
         name: true,
         email: true,
         role: true,
+        learnerType: true,
         schoolId: true,
         isActive: true,
       },
@@ -92,20 +94,17 @@ export class TokenService {
       throw new UnauthorizedException('User account is inactive');
     }
 
-    const payload = {
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-      schoolId: user.schoolId,
-    };
-
-    const accessToken = await this.jwtService.signAsync(payload, {
-      expiresIn: this.accessTokenExpiresIn,
+    // Rotate refresh token
+    await this.prisma.refreshToken.update({
+      where: {
+        id: storedToken.id,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
     });
 
-    return {
-      accessToken,
-    };
+    return this.generateTokens(user);
   }
 
   async logout(refreshToken: string) {
@@ -126,6 +125,22 @@ export class TokenService {
 
     return {
       message: 'Logged out successfully',
+    };
+  }
+
+  async logoutAll(userId: string) {
+    await this.prisma.refreshToken.updateMany({
+      where: {
+        userId,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+
+    return {
+      message: 'Logged out from all devices successfully',
     };
   }
 }

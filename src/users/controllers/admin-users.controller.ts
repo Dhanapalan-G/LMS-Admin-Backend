@@ -14,7 +14,6 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { UserRole } from '../../generated/prisma/client';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -22,6 +21,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UsersService } from '../users.service';
 import { PaginationDto } from '../../common/dto/pagination.dto';
+import { UserRole } from '../../generated/prisma/client';
 
 @ApiTags('Admin - Users')
 @ApiBearerAuth('access-token')
@@ -31,7 +31,7 @@ export class AdminUsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({
     summary: 'Create a user',
   })
@@ -53,7 +53,7 @@ export class AdminUsersController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({
     summary: 'Get all users',
   })
@@ -62,7 +62,7 @@ export class AdminUsersController {
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({
     summary: 'Get user by ID',
   })

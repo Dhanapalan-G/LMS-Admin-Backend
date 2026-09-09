@@ -34,7 +34,7 @@ export class SchoolsController {
   constructor(private readonly schoolsService: SchoolsService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
+  @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({
     summary: 'Create a school',
     description: 'Creates a new school with a unique school code.',
@@ -84,7 +84,7 @@ export class SchoolsController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
+  @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({
     summary: 'Get all schools',
     description: 'Returns a paginated list of schools.',
@@ -143,7 +143,7 @@ export class SchoolsController {
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
+  @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({
     summary: 'Get school by ID',
     description:

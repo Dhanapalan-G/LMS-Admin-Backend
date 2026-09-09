@@ -65,7 +65,7 @@ export class AuthController {
     description: 'OTP request cooldown is active.',
   })
   async adminLogin(@Body() dto: LoginDto) {
-    const result = await this.authService.loginAdmin(dto.email, dto.password);
+    const result = await this.authService.login(dto.email, dto.password);
 
     return {
       message: 'OTP sent successfully',
@@ -111,7 +111,7 @@ export class AuthController {
     description: 'OTP request cooldown is active.',
   })
   async learnerLogin(@Body() dto: LoginDto) {
-    const result = await this.authService.loginLearner(dto.email, dto.password);
+    const result = await this.authService.login(dto.email, dto.password);
 
     return {
       message: 'OTP sent successfully',

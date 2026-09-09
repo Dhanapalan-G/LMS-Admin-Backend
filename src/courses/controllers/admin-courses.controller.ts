@@ -39,7 +39,7 @@ export class AdminCoursesController {
   constructor(private readonly coursesService: CoursesService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({
     summary: 'Create a course',
     description:
@@ -70,7 +70,7 @@ export class AdminCoursesController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({
     summary: 'Get all courses',
     description:
@@ -107,7 +107,7 @@ export class AdminCoursesController {
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({
     summary: 'Get course by ID',
     description:
@@ -141,7 +141,7 @@ export class AdminCoursesController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({
     summary: 'Update course',
     description:
@@ -186,7 +186,7 @@ export class AdminCoursesController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({
     summary: 'Delete course',
     description:
