@@ -144,11 +144,15 @@ export class AdminModulesController {
     @Req() req: any,
     @Query() paginationDto: PaginationDto,
   ) {
-    return this.modulesService.findAll(
+    const modules = await this.modulesService.findAll(
       courseId,
       req.user.schoolId,
       paginationDto,
     );
+    return {
+      message: 'Modules retrieved successfully',
+      data: modules,
+    };
   }
 
   @Patch('modules/:id')
