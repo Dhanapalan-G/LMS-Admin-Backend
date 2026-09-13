@@ -20,21 +20,22 @@ import {
 import { CreateSchoolDto } from './dto/create-school.dto';
 import { SchoolsService } from './schools.service';
 import { PaginationDto } from '../common/dto/pagination.dto';
-
+import { AuthTypeGuard } from '../auth/guards/auth-type.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
+import { AuthType } from '../auth/decorators/auth-type.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../generated/prisma/client';
+import { RolesGuard } from '../common/guards/roles.guard';
 
 @ApiTags('Admin - Schools')
 @ApiBearerAuth('access-token')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Controller('api/v1/schools')
+@UseGuards(JwtAuthGuard, AuthTypeGuard, RolesGuard)
+@AuthType('ADMIN')
+@Roles('SUPER_ADMIN')
+@Controller('admin/schools')
 export class SchoolsController {
   constructor(private readonly schoolsService: SchoolsService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
   @ApiOperation({
     summary: 'Create a school',
     description: 'Creates a new school with a unique school code.',
@@ -84,7 +85,6 @@ export class SchoolsController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
   @ApiOperation({
     summary: 'Get all schools',
     description: 'Returns a paginated list of schools.',
@@ -143,7 +143,6 @@ export class SchoolsController {
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
   @ApiOperation({
     summary: 'Get school by ID',
     description:

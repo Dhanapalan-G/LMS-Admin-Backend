@@ -21,25 +21,28 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { UserRole } from '../../generated/prisma/client';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { RolesGuard } from '../../common/guards/roles.guard';
 import { PaginationDto } from '../../common/dto/pagination.dto';
-
 import { CreateCourseDto } from '../dto/create-course.dto';
 import { UpdateCourseDto } from '../dto/update-course.dto';
 import { CoursesService } from '../courses.service';
+import { AuthTypeGuard } from '../../auth/guards/auth-type.guard';
+import { AuthType } from '../../auth/decorators/auth-type.decorator';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { AdminRole } from '../../generated/prisma/client';
 
 @ApiTags('Admin - Courses')
 @ApiBearerAuth('access-token')
-@Controller('api/v1/admin/courses')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, AuthTypeGuard, RolesGuard)
+@AuthType('ADMIN')
+@Roles(AdminRole.SUPER_ADMIN, AdminRole.ADMIN)
+@Controller('admin/courses')
 export class AdminCoursesController {
   constructor(private readonly coursesService: CoursesService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
+  @AuthType('ADMIN')
   @ApiOperation({
     summary: 'Create a course',
     description:
@@ -70,7 +73,6 @@ export class AdminCoursesController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
   @ApiOperation({
     summary: 'Get all courses',
     description:
@@ -107,7 +109,6 @@ export class AdminCoursesController {
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
   @ApiOperation({
     summary: 'Get course by ID',
     description:
@@ -141,7 +142,6 @@ export class AdminCoursesController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.PRINCIPAL)
   @ApiOperation({
     summary: 'Update course',
     description:
@@ -186,7 +186,6 @@ export class AdminCoursesController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Delete course',
     description:
