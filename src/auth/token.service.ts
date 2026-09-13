@@ -28,15 +28,28 @@ export class TokenService {
   }
 
   async verifyRefreshToken(token: string) {
-    try {
-      return await this.jwtService.verifyAsync(token);
-    } catch (error) {
-      console.log('cvbnm', 'error');
-      return null;
-    }
+    return await this.jwtService.verifyAsync(token);
   }
+
   hashRefreshToken(token: string) {
     return createHash('sha256').update(token).digest('hex');
+  }
+
+  async generateAdminPasswordResetToken(adminId: string): Promise<string> {
+    return this.jwtService.signAsync(
+      {
+        sub: adminId,
+        authType: 'ADMIN',
+        purpose: 'PASSWORD_RESET',
+      },
+      {
+        expiresIn: '10m',
+      },
+    );
+  }
+
+  async verifyAdminPasswordResetToken(token: string) {
+    return this.jwtService.verifyAsync(token);
   }
 
   async generatePasswordResetToken(learnerId: string): Promise<string> {

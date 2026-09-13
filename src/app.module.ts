@@ -12,6 +12,7 @@ import { LearnerTypesModule } from './learner-types/learner-type.module';
 import { AuthModule } from './auth/auth.module';
 import { AdminsModule } from './admin/admins/admins.module';
 import { LearnersModule } from './admin/learners/learners.module';
+import { LessonsModule } from './lessons/lessons.module';
 
 @Module({
   imports: [
@@ -43,6 +44,8 @@ import { LearnersModule } from './admin/learners/learners.module';
     CoursesModule,
 
     ModulesModule,
+
+    LessonsModule,
 
     LearnerTypesModule,
   ],
