@@ -7,23 +7,481 @@ datasource db {
   provider = "postgresql"
 }
 
-enum UserRole {
-  SUPER_ADMIN
-  SCHOOL_ADMIN
-  LEARNER
+model AdminUser {
+  id               String                 @id @default(uuid())
+  schoolId         String?
+  employeeId       String                 @unique
+  name             String
+  email            String                 @unique
+  phone            String?                @unique
+  password         String
+  role             AdminRole
+  status           AdminStatus            @default(ACTIVE)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  otpVerifications AdminOtpVerification[]
+  refreshTokens    AdminRefreshToken[]
+  school           School?                @relation(fields: [schoolId], references: [id])
+  auditLogs        AuditLog[]
+  importJobs       ImportJob[]            @relation("ImportCreatedBy")
+  createdCourses   Course[]               @relation("CourseCreatedBy")
+
+  @@index([schoolId])
+  @@index([role])
+  @@index([employeeId])
 }
 
-enum LearnerType {
-  PRINCIPAL
-  COMPARTMENT_HEAD
-  PRIME_MEMBER
-  TEACHER
-  NON_TEACHING_STAFF
-  STUDENT
+model School {
+  id           String        @id @default(uuid())
+  name         String
+  code         String        @unique
+  address      String?
+  phone        String?
+  email        String?
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  adminUsers   AdminUser[]
+  imports      ImportJob[]
+  learners     Learner[]
+  learnerTypes LearnerType[]
+  courses      Course[]
+}
+
+model Learner {
+  id               String                   @id @default(uuid())
+  schoolId         String
+  name             String
+  email            String                   @unique
+  phone            String?                  @unique
+  password         String
+  passwordSet      Boolean                  @default(false)
+  learnerTypeId    String
+  employeeId       String
+  board            String?
+  department       String?
+  dateOfJoining    DateTime?
+  status           LearnerStatus            @default(PENDING_APPROVAL)
+  rejectionReason  String?
+  rejectedAt       DateTime?
+  rejectedBy       String?
+  approvedAt       DateTime?
+  approvedBy       String?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  bookmarks        Bookmark[]
+  certificates     Certificate[]
+  enrollments      Enrollment[]
+  learnerType      LearnerType              @relation(fields: [learnerTypeId], references: [id])
+  school           School                   @relation(fields: [schoolId], references: [id])
+  otpVerifications LearnerOtpVerification[]
+  refreshTokens    LearnerRefreshToken[]
+  progress         LessonProgress[]
+  notifications    Notification[]
+  quizAttempts     QuizAttempt[]
+
+  @@index([schoolId])
+  @@index([learnerTypeId])
+  @@index([employeeId])
+  @@index([status])
+}
+
+model LearnerType {
+  id        String    @id @default(uuid())
+  schoolId  String
+  name      String
+  code      String
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  learners  Learner[]
+  school    School    @relation(fields: [schoolId], references: [id])
+
+  @@unique([schoolId, code])
+  @@index([schoolId])
+}
+
+model AdminOtpVerification {
+  id          String     @id @default(uuid())
+  adminUserId String
+  codeHash    String
+  purpose     OtpPurpose @default(LOGIN)
+  channel    OtpChannel
+  expiresAt   DateTime
+  verifiedAt  DateTime?
+  revokedAt   DateTime?
+  attempts    Int        @default(0)
+  maxAttempts Int        @default(5)
+  lastSentAt  DateTime
+  createdAt   DateTime   @default(now())
+  adminUser   AdminUser  @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId])
+  @@index([expiresAt])
+  @@index([adminUserId, purpose])
+  @@index([adminUserId, channel])
+}
+
+model LearnerOtpVerification {
+  id          String     @id @default(uuid())
+  learnerId   String
+  codeHash    String
+  purpose     OtpPurpose @default(LOGIN)
+  channel    OtpChannel
+  expiresAt   DateTime
+  verifiedAt  DateTime?
+  revokedAt   DateTime?
+  attempts    Int        @default(0)
+  maxAttempts Int        @default(5)
+  lastSentAt  DateTime
+  createdAt   DateTime   @default(now())
+  learner     Learner    @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([learnerId])
+  @@index([learnerId, purpose])
+  @@index([learnerId, channel])
+}
+
+model AdminRefreshToken {
+  id          String    @id @default(uuid())
+  adminUserId String
+  tokenHash   String
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  adminUser   AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId])
+  @@index([expiresAt])
+}
+
+model LearnerRefreshToken {
+  id        String    @id @default(uuid())
+  learnerId String
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  learner   Learner   @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@index([learnerId])
+  @@index([expiresAt])
+}
+
+model Category {
+  id          String         @id @default(uuid()) @db.Uuid
+  name        String         @unique
+  description String?
+  status      CategoryStatus @default(ACTIVE)
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  courses     Course[]
+
+  @@map("categories")
+}
+
+model Course {
+  id              String         @id @default(uuid())
+  categoryId      String         @db.Uuid
+  schoolId        String
+  createdById     String
+  title           String
+  code            String?
+  description     String?
+  thumbnail       String?
+  status          CourseStatus   @default(DRAFT)
+  durationMinutes Int?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  certificates    Certificate[]
+  modules         CourseModule[]
+  enrollments     Enrollment[]
+  quiz            Quiz?
+  category        Category       @relation(fields: [categoryId], references: [id])
+  createdBy       AdminUser      @relation("CourseCreatedBy", fields: [createdById], references: [id])
+  school          School         @relation(fields: [schoolId], references: [id])
+
+  @@index([categoryId])
+  @@index([schoolId])
+  @@index([createdById])
+  @@index([status])
+  @@map("courses")
+}
+
+model CourseModule {
+  id          String   @id @default(uuid())
+  courseId    String
+  title       String
+  description String?
+  orderIndex  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons     Lesson[]
+
+  @@index([courseId])
+}
+
+model Lesson {
+  id          String           @id @default(uuid())
+  moduleId    String
+  title       String
+  description String?
+  type        LessonType
+  content     String?
+  position    Int
+  duration    Int?
+  isRequired  Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  bookmarks   Bookmark[]
+  module      CourseModule     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  files       LessonFile[]
+  progress    LessonProgress[]
+
+  @@index([moduleId])
+}
+
+model LessonFile {
+  id        String   @id @default(uuid())
+  lessonId  String
+  fileName  String
+  fileUrl   String
+  fileType  String
+  fileSize  BigInt?
+  mimeType  String?
+  createdAt DateTime @default(now())
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
+}
+
+model Enrollment {
+  id          String    @id @default(uuid())
+  learnerId   String
+  courseId    String
+  enrolledAt  DateTime  @default(now())
+  completedAt DateTime?
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  learner     Learner   @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@unique([learnerId, courseId])
+  @@index([courseId])
+  @@index([learnerId])
+}
+
+model LessonProgress {
+  id          String         @id @default(uuid())
+  learnerId   String
+  lessonId    String
+  status      ProgressStatus @default(NOT_STARTED)
+  position    Int            @default(0)
+  percentage  Float          @default(0)
+  startedAt   DateTime?
+  completedAt DateTime?
+  updatedAt   DateTime       @updatedAt
+  learner     Learner        @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  lesson      Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([learnerId, lessonId])
+  @@index([learnerId])
+  @@index([lessonId])
+}
+
+model Bookmark {
+  id        String   @id @default(uuid())
+  learnerId String
+  lessonId  String
+  position  Int?
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  learner   Learner  @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([learnerId, lessonId])
+  @@index([learnerId])
+}
+
+model Quiz {
+  id           String         @id @default(uuid())
+  courseId     String         @unique
+  title        String
+  description  String?
+  passingScore Float?
+  status       QuizStatus     @default(DRAFT)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  course       Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  attempts     QuizAttempt[]
+  questions    QuizQuestion[]
+}
+
+model QuizQuestion {
+  id        String       @id @default(uuid())
+  quizId    String
+  question  String
+  position  Int
+  marks     Float        @default(1)
+  createdAt DateTime     @default(now())
+  answers   QuizAnswer[]
+  options   QuizOption[]
+  quiz      Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([quizId])
+}
+
+model QuizOption {
+  id         String       @id @default(uuid())
+  questionId String
+  optionText String
+  position   Int
+  isCorrect  Boolean      @default(false)
+  answers    QuizAnswer[]
+  question   QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+}
+
+model QuizAttempt {
+  id          String       @id @default(uuid())
+  learnerId   String
+  quizId      String
+  score       Float?
+  passed      Boolean?
+  completed   Boolean      @default(false)
+  startedAt   DateTime     @default(now())
+  completedAt DateTime?
+  answers     QuizAnswer[]
+  learner     Learner      @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  quiz        Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([learnerId])
+  @@index([quizId])
+}
+
+model QuizAnswer {
+  id         String       @id @default(uuid())
+  attemptId  String
+  questionId String
+  optionId   String?
+  isCorrect  Boolean?
+  marks      Float?
+  attempt    QuizAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  option     QuizOption?  @relation(fields: [optionId], references: [id])
+  question   QuizQuestion @relation(fields: [questionId], references: [id])
+
+  @@unique([attemptId, questionId])
+  @@index([attemptId])
+}
+
+model ImportJob {
+  id          String        @id @default(uuid())
+  schoolId    String
+  createdById String
+  fileName    String
+  fileUrl     String?
+  status      ImportStatus  @default(PENDING)
+  totalRows   Int           @default(0)
+  successRows Int           @default(0)
+  failedRows  Int           @default(0)
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime      @default(now())
+  errors      ImportError[]
+  createdBy   AdminUser     @relation("ImportCreatedBy", fields: [createdById], references: [id])
+  school      School        @relation(fields: [schoolId], references: [id])
+
+  @@index([schoolId])
+  @@index([createdById])
+  @@index([status])
+}
+
+model ImportError {
+  id          String    @id @default(uuid())
+  importJobId String
+  rowNumber   Int?
+  fieldName   String?
+  message     String
+  createdAt   DateTime  @default(now())
+  importJob   ImportJob @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+
+  @@index([importJobId])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  learnerId String
+  title     String
+  message   String
+  type      NotificationType @default(GENERAL)
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  readAt    DateTime?
+  learner   Learner          @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@index([learnerId])
+  @@index([isRead])
+}
+
+model Certificate {
+  id                String   @id @default(uuid())
+  learnerId         String
+  courseId          String
+  certificateNumber String   @unique
+  fileUrl           String?
+  issuedAt          DateTime @default(now())
+  course            Course   @relation(fields: [courseId], references: [id])
+  learner           Learner  @relation(fields: [learnerId], references: [id])
+
+  @@unique([learnerId, courseId])
+  @@index([learnerId])
+  @@index([courseId])
+}
+
+model AuditLog {
+  id          String     @id @default(uuid())
+  adminUserId String?
+  action      String
+  entity      String
+  entityId    String?
+  details     Json?
+  createdAt   DateTime   @default(now())
+  adminUser   AdminUser? @relation(fields: [adminUserId], references: [id])
+
+  @@index([adminUserId])
+  @@index([entity])
+  @@index([createdAt])
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+}
+
+enum AdminStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum LearnerStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  REJECTED
+  INACTIVE
+  SUSPENDED
+}
+
+enum OtpChannel {
+  SMS
+  EMAIL
 }
 
 enum OtpPurpose {
   LOGIN
+  PASSWORD_RESET
 }
 
 enum CategoryStatus {
@@ -69,445 +527,4 @@ enum NotificationType {
   COURSE
   QUIZ
   SYSTEM
-}
-
-model School {
-  id        String   @id @default(uuid())
-  name      String
-  code      String   @unique
-  address   String?
-  phone     String?
-  email     String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  users   User[]
-  courses Course[]
-  imports ImportJob[]
-}
-
-model User {
-  id            String       @id @default(uuid())
-
-  schoolId      String?
-
-  name          String
-  email         String       @unique
-  phone         String?
-
-  password      String
-
-  role          UserRole
-  learnerType   LearnerType?
-
-  employeeId    String?
-
-  board         String?
-  department    String?
-  dateOfJoining DateTime?
-
-  isActive      Boolean      @default(true)
-
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-
-  school School? @relation(fields: [schoolId], references: [id])
-
-  // existing relations
-  enrollments   Enrollment[]
-  progress      LessonProgress[]
-  bookmarks     Bookmark[]
-  quizAttempts  QuizAttempt[]
-  certificates  Certificate[]
-  notifications Notification[]
-  auditLogs     AuditLog[]
-
-  createdCourses Course[]    @relation("CourseCreatedBy")
-  importJobs     ImportJob[] @relation("ImportCreatedBy")
-
-  otpVerifications OtpVerification[]
-  refreshTokens    RefreshToken[]
-
-  @@index([schoolId])
-  @@index([role])
-  @@index([learnerType])
-  @@index([department])
-}
-
-model OtpVerification {
-  id           String      @id @default(uuid())
-  userId       String
-  codeHash     String
-  purpose      OtpPurpose  @default(LOGIN)
-
-  expiresAt    DateTime
-  verifiedAt   DateTime?
-  revokedAt    DateTime?   // <-- ADD THIS
-
-  attempts     Int         @default(0)
-  maxAttempts  Int         @default(5)
-
-  lastSentAt   DateTime
-  createdAt    DateTime    @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([expiresAt])
-}
-
-model RefreshToken {
-  id          String    @id @default(uuid())
-  userId      String
-
-  tokenHash   String
-  expiresAt   DateTime
-  revokedAt   DateTime?
-
-  createdAt   DateTime  @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([expiresAt])
-}
-
-model Category {
-  id          String         @id @default(uuid()) @db.Uuid
-  name        String         @unique
-  description String?
-  status      CategoryStatus @default(ACTIVE)
-
-  courses     Course[]
-
-  createdAt   DateTime       @default(now()) @map("created_at")
-  updatedAt   DateTime       @updatedAt @map("updated_at")
-
-  @@map("categories")
-}
-
-model Course {
-  id          String @id @default(uuid())
-
-  categoryId  String   @db.Uuid
-  category    Category @relation(fields: [categoryId], references: [id])
-
-  schoolId    String
-  createdById String
-
-  title       String
-  code        String?
-  description String?
-  thumbnail   String?
-  status      CourseStatus @default(DRAFT)
-  durationMinutes Int?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  school    School @relation(fields: [schoolId], references: [id])
-  createdBy User   @relation("CourseCreatedBy", fields: [createdById], references: [id])
-
-  modules      CourseModule[]
-  enrollments  Enrollment[]
-  quiz         Quiz?
-  certificates Certificate[]
-
-  @@index([categoryId])
-  @@map("courses")
-
-  @@index([schoolId])
-  @@index([createdById])
-  @@index([status])
-}
-
-model CourseModule {
-  id          String  @id @default(uuid())
-  courseId    String
-  title       String
-  description String?
-  orderIndex  Int      @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  lessons Lesson[]
-
-  @@index([courseId])
-}
-
-model Lesson {
-  id       String @id @default(uuid())
-  moduleId String
-
-  title       String
-  description String?
-  type        LessonType
-  content     String?
-  position    Int
-  duration    Int?
-  isRequired  Boolean    @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  module CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-
-  files     LessonFile[]
-  progress  LessonProgress[]
-  bookmarks Bookmark[]
-
-  @@index([moduleId])
-}
-
-model LessonFile {
-  id       String @id @default(uuid())
-  lessonId String
-
-  fileName String
-  fileUrl  String
-  fileType String
-  fileSize BigInt?
-  mimeType String?
-
-  createdAt DateTime @default(now())
-
-  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-
-  @@index([lessonId])
-}
-
-model Enrollment {
-  id       String @id @default(uuid())
-  userId   String
-  courseId String
-
-  enrolledAt  DateTime  @default(now())
-  completedAt DateTime?
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, courseId])
-  @@index([courseId])
-}
-
-model LessonProgress {
-  id       String @id @default(uuid())
-  userId   String
-  lessonId String
-
-  status     ProgressStatus @default(NOT_STARTED)
-  position   Int            @default(0)
-  percentage Float          @default(0)
-
-  startedAt   DateTime?
-  completedAt DateTime?
-  updatedAt   DateTime  @updatedAt
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, lessonId])
-  @@index([userId])
-  @@index([lessonId])
-}
-
-model Bookmark {
-  id       String @id @default(uuid())
-  userId   String
-  lessonId String
-
-  position Int?
-  note     String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, lessonId])
-  @@index([userId])
-}
-
-model Quiz {
-  id       String @id @default(uuid())
-  courseId String @unique
-
-  title        String
-  description  String?
-  passingScore Float?
-  status       QuizStatus @default(DRAFT)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  course    Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  questions QuizQuestion[]
-  attempts  QuizAttempt[]
-}
-
-model QuizQuestion {
-  id     String @id @default(uuid())
-  quizId String
-
-  question String
-  position Int
-  marks    Float  @default(1)
-
-  createdAt DateTime @default(now())
-
-  quiz    Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  options QuizOption[]
-  answers QuizAnswer[]
-
-  @@index([quizId])
-}
-
-model QuizOption {
-  id         String @id @default(uuid())
-  questionId String
-
-  optionText String
-  position   Int
-  isCorrect  Boolean @default(false)
-
-  question QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  answers  QuizAnswer[]
-
-  @@index([questionId])
-}
-
-model QuizAttempt {
-  id     String @id @default(uuid())
-  userId String
-  quizId String
-
-  score     Float?
-  passed    Boolean?
-  completed Boolean  @default(false)
-
-  startedAt   DateTime  @default(now())
-  completedAt DateTime?
-
-  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  quiz    Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  answers QuizAnswer[]
-
-  @@index([userId])
-  @@index([quizId])
-}
-
-model QuizAnswer {
-  id         String  @id @default(uuid())
-  attemptId  String
-  questionId String
-  optionId   String?
-
-  isCorrect Boolean?
-  marks     Float?
-
-  attempt  QuizAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  question QuizQuestion @relation(fields: [questionId], references: [id])
-  option   QuizOption?  @relation(fields: [optionId], references: [id])
-
-  @@unique([attemptId, questionId])
-  @@index([attemptId])
-}
-
-model ImportJob {
-  id          String @id @default(uuid())
-  schoolId    String
-  createdById String
-
-  fileName String
-  fileUrl  String?
-  status   ImportStatus @default(PENDING)
-
-  totalRows   Int @default(0)
-  successRows Int @default(0)
-  failedRows  Int @default(0)
-
-  startedAt   DateTime?
-  completedAt DateTime?
-  createdAt   DateTime  @default(now())
-
-  school    School        @relation(fields: [schoolId], references: [id])
-  createdBy User          @relation("ImportCreatedBy", fields: [createdById], references: [id])
-  errors    ImportError[]
-
-  @@index([schoolId])
-  @@index([createdById])
-  @@index([status])
-}
-
-model ImportError {
-  id          String @id @default(uuid())
-  importJobId String
-
-  rowNumber Int?
-  fieldName String?
-  message   String
-
-  createdAt DateTime @default(now())
-
-  importJob ImportJob @relation(fields: [importJobId], references: [id], onDelete: Cascade)
-
-  @@index([importJobId])
-}
-
-model Notification {
-  id     String @id @default(uuid())
-  userId String
-
-  title   String
-  message String
-  type    NotificationType @default(GENERAL)
-  isRead  Boolean          @default(false)
-
-  createdAt DateTime  @default(now())
-  readAt    DateTime?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([isRead])
-}
-
-model Certificate {
-  id       String @id @default(uuid())
-  userId   String
-  courseId String
-
-  certificateNumber String   @unique
-  fileUrl           String?
-  issuedAt          DateTime @default(now())
-
-  user   User   @relation(fields: [userId], references: [id])
-  course Course @relation(fields: [courseId], references: [id])
-
-  @@unique([userId, courseId])
-  @@index([userId])
-  @@index([courseId])
-}
-
-model AuditLog {
-  id     String  @id @default(uuid())
-  userId String?
-
-  action   String
-  entity   String
-  entityId String?
-  details  Json?
-
-  createdAt DateTime @default(now())
-
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  @@index([userId])
-  @@index([entity])
-  @@index([createdAt])
 }

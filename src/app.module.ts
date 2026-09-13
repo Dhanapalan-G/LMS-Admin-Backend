@@ -4,12 +4,14 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
-import { UsersModule } from './users/users.module';
 import { SchoolsModule } from './schools/schools.module';
-import { AuthModule } from './auth/auth.module';
 import { CoursesModule } from './courses/courses.module';
 import { ModulesModule } from './modules/modules.module';
 import { CategoriesModule } from './categories/categories.module';
+import { LearnerTypesModule } from './learner-types/learner-type.module';
+import { AuthModule } from './auth/auth.module';
+import { AdminsModule } from './admin/admins/admins.module';
+import { LearnersModule } from './admin/learners/learners.module';
 
 @Module({
   imports: [
@@ -28,17 +30,21 @@ import { CategoriesModule } from './categories/categories.module';
 
     HealthModule,
 
-    UsersModule,
+    AuthModule,
+
+    AdminsModule,
+
+    LearnersModule,
 
     SchoolsModule,
-
-    AuthModule,
 
     CategoriesModule,
 
     CoursesModule,
 
     ModulesModule,
+
+    LearnerTypesModule,
   ],
   // controllers: [AppController],
   // providers: [AppService],

@@ -21,21 +21,23 @@ import { CategoriesService } from '../categories.service';
 import { CreateCategoryDto } from '../dto/create-category.dto';
 import { UpdateCategoryDto } from '../dto/update-category.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
-
+import { AuthTypeGuard } from '../../auth/guards/auth-type.guard';
+import { AuthType } from '../../auth/decorators/auth-type.decorator';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
-import { UserRole } from '../../generated/prisma/client';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { AdminRole } from '../../generated/prisma/client';
 
 @ApiTags('Admin - Categories')
 @ApiBearerAuth('access-token')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Controller('api/v1/admin/categories')
+@UseGuards(JwtAuthGuard, AuthTypeGuard, RolesGuard)
+@AuthType('ADMIN')
+@Roles(AdminRole.SUPER_ADMIN, AdminRole.ADMIN)
+@Controller('admin/categories')
 export class AdminCategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Post()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({
     summary: 'Create category',
     description: 'Creates a new category.',
@@ -65,7 +67,6 @@ export class AdminCategoriesController {
   }
 
   @Get()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({
     summary: 'Get all categories',
     description: 'Returns a paginated list of categories.',
@@ -87,7 +88,6 @@ export class AdminCategoriesController {
   }
 
   @Get(':id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({
     summary: 'Get category by ID',
     description: 'Returns a category using its ID.',
@@ -109,12 +109,10 @@ export class AdminCategoriesController {
     description: 'Category not found.',
   })
   async findOne(@Param('id') id: string) {
-    console.log('id', id);
     return this.categoriesService.findOne(id);
   }
 
   @Patch(':id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({
     summary: 'Update category',
     description: 'Updates an existing category.',
@@ -151,7 +149,6 @@ export class AdminCategoriesController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({
     summary: 'Deactivate category',
     description: 'Deactivates an existing category.',

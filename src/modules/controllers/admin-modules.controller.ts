@@ -21,28 +21,30 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { UserRole } from '../../generated/prisma/client';
-
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { RolesGuard } from '../../common/guards/roles.guard';
-
 import { ModulesService } from '../modules.service';
 import { CreateModuleDto } from '../dto/create-module.dto';
 import { UpdateModuleDto } from '../dto/update-module.dto';
-import { ModuleResponseDto } from '../dto/module-response.dto';
 import { ModuleListResponseDto } from '../dto/module-list-response.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
+import { AuthType } from '../../auth/decorators/auth-type.decorator';
+import { AuthTypeGuard } from '../../auth/guards/auth-type.guard';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { AdminRole } from '../../generated/prisma/client';
 
 @ApiTags('Admin - Modules')
 @ApiBearerAuth('access-token')
-@Controller('api/v1/admin')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, AuthTypeGuard, RolesGuard)
+@AuthType('ADMIN')
+@Roles(AdminRole.SUPER_ADMIN, AdminRole.ADMIN)
+@Controller('admin/modules')
 export class AdminModulesController {
   constructor(private readonly modulesService: ModulesService) {}
 
   @Post('courses/:courseId/modules')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @AuthType('ADMIN')
+  @Roles('SUPER_ADMIN', 'ADMIN')
   @ApiOperation({
     summary: 'Create a module inside a course',
     description:
@@ -96,7 +98,8 @@ export class AdminModulesController {
   }
 
   @Get('courses/:courseId/modules')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @AuthType('ADMIN')
+  @Roles('SUPER_ADMIN', 'ADMIN')
   @ApiOperation({
     summary: 'Get all modules of a course',
     description:
@@ -156,7 +159,8 @@ export class AdminModulesController {
   }
 
   @Patch('modules/:id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @AuthType('ADMIN')
+  @Roles('SUPER_ADMIN', 'ADMIN')
   @ApiOperation({
     summary: 'Update a module',
     description:
@@ -206,7 +210,8 @@ export class AdminModulesController {
   }
 
   @Delete('modules/:id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @AuthType('ADMIN')
+  @Roles('SUPER_ADMIN', 'ADMIN')
   @ApiOperation({
     summary: 'Delete a module',
     description:
