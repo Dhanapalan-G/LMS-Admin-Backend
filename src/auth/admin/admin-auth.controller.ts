@@ -1,6 +1,7 @@
 import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiOperation,
   ApiResponse,
   ApiTags,
@@ -14,6 +15,9 @@ import { AdminRefreshDto } from './dto/admin-refresh.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { AuthTypeGuard } from '../guards/auth-type.guard';
 import { AuthType } from '../decorators/auth-type.decorator';
+import { AdminForgotPasswordDto } from './dto/admin-forgot-password.dto';
+import { AdminResetPasswordDto } from './dto/admin-reset-password.dto';
+import { AdminPasswordVerifyOtpDto } from './dto/admin-password-verify-otp.dto';
 
 @ApiTags('Admin Authentication')
 @Controller('admin/auth')
@@ -126,6 +130,111 @@ export class AdminAuthController {
   })
   async refresh(@Body() dto: AdminRefreshDto) {
     return this.adminAuthService.refresh(dto.refreshToken);
+  }
+
+  @Post('password/forgot')
+  @ApiOperation({
+    summary: 'Send password reset OTP',
+    description:
+      'Validates the admin email or phone number and sends a password reset OTP through the corresponding channel.',
+  })
+  @ApiBody({
+    type: AdminForgotPasswordDto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Password reset OTP sent successfully.',
+    schema: {
+      example: {
+        success: true,
+        message: 'OTP sent successfully to your email',
+        data: {
+          message: 'OTP sent successfully to your email',
+          otp: '456789',
+          channel: 'EMAIL',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Admin not found.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request or OTP resend cooldown.',
+  })
+  async forgotPassword(@Body() dto: AdminForgotPasswordDto) {
+    return this.adminAuthService.forgotPassword(dto);
+  }
+
+  @Post('password/verify-otp')
+  @ApiOperation({
+    summary: 'Verify password reset OTP',
+    description:
+      'Validates the OTP sent to the admin email or phone number and returns a short-lived password reset token.',
+  })
+  @ApiBody({
+    type: AdminPasswordVerifyOtpDto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'OTP verified successfully.',
+    schema: {
+      example: {
+        success: true,
+        message: 'OTP verified successfully',
+        data: {
+          message: 'OTP verified successfully',
+          resetToken: 'eyJhbGciOiJIUzI1NiIs...',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid, expired, or maximum-attempt OTP.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Admin not found.',
+  })
+  async verifyPasswordOtp(@Body() dto: AdminPasswordVerifyOtpDto) {
+    return this.adminAuthService.verifyPasswordOtp(dto);
+  }
+
+  @Post('password/reset')
+  @ApiOperation({
+    summary: 'Reset admin password',
+    description:
+      'Resets the admin password using the password reset token received after successful OTP verification.',
+  })
+  @ApiBody({
+    type: AdminResetPasswordDto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Password reset successfully.',
+    schema: {
+      example: {
+        success: true,
+        message: 'Password reset successfully',
+        data: {
+          message: 'Password reset successfully',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid or expired password reset token.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Admin not found.',
+  })
+  async resetPassword(@Body() dto: AdminResetPasswordDto) {
+    return this.adminAuthService.resetPassword(dto);
   }
 
   @Post('logout')

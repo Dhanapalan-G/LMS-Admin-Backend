@@ -7,7 +7,7 @@ import { SmsModule } from '../../notifications/sms/sms.module';
 import { EmailModule } from '../../notifications/email/email.module';
 
 @Module({
-  imports: [PrismaModule, SmsModule, EmailModule],
+  imports: [ SmsModule, EmailModule],
   controllers: [LearnerAuthController],
   providers: [LearnerAuthService],
   exports: [LearnerAuthService],

@@ -175,6 +175,7 @@ export class LearnerAuthController {
   async profile(@Req() req: any) {
     return this.learnerAuthService.me(req.user.id);
   }
+
   @Post('refresh')
   @ApiOperation({
     summary: 'Refresh learner access token',
@@ -252,6 +253,26 @@ export class LearnerAuthController {
   }
 
   @Post('password/forgot')
+  @ApiOperation({
+    summary: 'Forgot password',
+    description:
+      'Send an OTP to the learner. Employee ID sends the OTP to both email and phone. Email sends OTP to email, and phone number sends OTP to phone.',
+  })
+  @ApiBody({
+    type: LearnerForgotPasswordDto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'OTP sent successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Learner not found',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid identifier',
+  })
   async forgotPassword(@Body() dto: LearnerForgotPasswordDto) {
     return this.learnerAuthService.forgotPassword(dto);
   }

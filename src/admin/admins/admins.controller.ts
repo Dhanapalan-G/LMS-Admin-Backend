@@ -32,10 +32,10 @@ import { PaginationDto } from '../../common/dto/pagination.dto';
 @ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard, AuthTypeGuard, RolesGuard)
 @AuthType('ADMIN')
-@Roles(AdminRole.SUPER_ADMIN, AdminRole.ADMIN)
 @Controller('admin/users')
 export class AdminsController {
   constructor(private readonly adminsService: AdminsService) {}
+
   @Post()
   @Roles(AdminRole.SUPER_ADMIN)
   @ApiOperation({
@@ -82,9 +82,7 @@ export class AdminsController {
   }
 
   @Get()
-  @ApiBearerAuth('access-token')
-  @UseGuards(JwtAuthGuard, AuthTypeGuard)
-  @AuthType('ADMIN')
+  @Roles(AdminRole.SUPER_ADMIN)
   @ApiOperation({
     summary: 'Get all admins',
     description:
@@ -133,9 +131,7 @@ export class AdminsController {
   }
 
   @Get(':id')
-  @ApiBearerAuth('access-token')
-  @UseGuards(JwtAuthGuard, AuthTypeGuard)
-  @AuthType('ADMIN')
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.ADMIN)
   @ApiOperation({
     summary: 'Get admin by ID',
     description: 'Retrieves a specific admin using the admin ID.',
@@ -184,9 +180,7 @@ export class AdminsController {
   }
 
   @Patch(':id')
-  @ApiBearerAuth('access-token')
-  @UseGuards(JwtAuthGuard, AuthTypeGuard)
-  @AuthType('ADMIN')
+  @Roles(AdminRole.SUPER_ADMIN)
   @ApiOperation({
     summary: 'Update admin',
     description: 'Updates the details of an existing admin.',
@@ -232,9 +226,7 @@ export class AdminsController {
   }
 
   @Delete(':id')
-  @ApiBearerAuth('access-token')
-  @UseGuards(JwtAuthGuard, AuthTypeGuard)
-  @AuthType('ADMIN')
+  @Roles(AdminRole.SUPER_ADMIN)
   @ApiOperation({
     summary: 'Delete admin',
     description: 'Deletes an existing admin by ID.',

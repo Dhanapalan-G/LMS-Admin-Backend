@@ -30,7 +30,7 @@ import { AuthType } from '../../auth/decorators/auth-type.decorator';
 import { RejectLearnerDto } from './dto/reject-learner.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 
-@ApiTags('Admin - Learners')
+@ApiTags('Admin - Learners Management')
 @ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard, AuthTypeGuard, RolesGuard)
 @AuthType('ADMIN')

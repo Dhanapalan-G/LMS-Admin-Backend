@@ -291,6 +291,10 @@ export class LearnerAuthService {
     )}${username.slice(-1)}@${domain}`;
   }
 
+  // =========================================================
+  // SEND OTP
+  // =========================================================
+
   async sendOtp(dto: LearnerSendOtpDto) {
     const learner = await this.prisma.learner.findFirst({
       where: {
@@ -365,6 +369,7 @@ export class LearnerAuthService {
       message: 'OTP sent successfully',
       data: {
         employeeId: learner.employeeId,
+        otp,
         channel: dto.channel,
         maskedValue:
           dto.channel === OtpChannel.SMS
@@ -479,7 +484,7 @@ export class LearnerAuthService {
       learner: {
         id: learner.id,
         name: learner.name,
-        // emplooyeId:learner.emm
+        emplooyeId: learner.employeeId,
         email: learner.email,
         schoolId: learner.schoolId,
         learnerTypeId: learner.learnerTypeId,
@@ -492,34 +497,20 @@ export class LearnerAuthService {
   // =========================================================
 
   async refresh(refreshToken: string) {
-    // 1. Verify JWT refresh token
-    const payload = await this.tokenService.verifyRefreshToken(refreshToken);
+    let payload: any;
 
-    // 2. Make sure this is a learner refresh token
-    if (payload.authType !== 'LEARNER' || !payload.sub) {
-      throw new UnauthorizedException('Invalid learner refresh token');
+    try {
+      payload = await this.tokenService.verifyRefreshToken(refreshToken);
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
     }
-
-    // 3. Find learner from JWT subject
-    const learner = await this.prisma.learner.findUnique({
-      where: {
-        id: payload.sub,
-      },
-    });
-
-    if (!learner) {
-      throw new UnauthorizedException('Learner not found');
-    }
-
-    // 4. Make sure learner is still active
-    if (learner.status !== LearnerStatus.ACTIVE) {
-      throw new UnauthorizedException('Learner account is not active');
-    }
+    
+    const tokenHash = this.tokenService.hashRefreshToken(refreshToken);
 
     // 5. Find all active refresh tokens for this learner
-    const storedTokens = await this.prisma.learnerRefreshToken.findMany({
+    const storedToken = await this.prisma.learnerRefreshToken.findFirst({
       where: {
-        learnerId: learner.id,
+        tokenHash,
         revokedAt: null,
         expiresAt: {
           gt: new Date(),
@@ -527,26 +518,23 @@ export class LearnerAuthService {
       },
     });
 
-    // 6. Compare supplied refresh token with stored hashes
-    let matchedToken: (typeof storedTokens)[number] | undefined;
-
-    for (const storedToken of storedTokens) {
-      const matched = await bcrypt.compare(refreshToken, storedToken.tokenHash);
-
-      if (matched) {
-        matchedToken = storedToken;
-        break;
-      }
+    if (!storedToken) {
+      throw new UnauthorizedException('Refresh token is invalid or revoked');
     }
 
-    if (!matchedToken) {
-      throw new UnauthorizedException('Refresh token is invalid or expired');
+    const learner = await this.prisma.learner.findUnique({
+      where: {
+        id: payload.sub,
+      },
+    });
+
+    if (!learner || learner.status !== 'ACTIVE') {
+      throw new UnauthorizedException('Learner account is not active');
     }
 
-    // 7. Revoke the old refresh token
     await this.prisma.learnerRefreshToken.update({
       where: {
-        id: matchedToken.id,
+        id: storedToken.id,
       },
       data: {
         revokedAt: new Date(),
@@ -655,16 +643,24 @@ export class LearnerAuthService {
     };
   }
 
+  // =========================================================
+  // FORGET PASSWORD
+  // =========================================================
+
   async forgotPassword(dto: LearnerForgotPasswordDto) {
     const learner = await this.prisma.learner.findFirst({
       where: {
-        OR: [{ email: dto.identifier }, { phone: dto.identifier }],
+        OR: [
+          { employeeId: dto.identifier },
+          { email: dto.identifier },
+          { phone: dto.identifier },
+        ],
       },
     });
 
     if (!learner) {
       throw new NotFoundException(
-        'No learner found with this email or phone number',
+        'No learner found with this employee id or email or phone number',
       );
     }
 
@@ -674,7 +670,10 @@ export class LearnerAuthService {
 
     let channel: OtpChannel;
 
-    if (learner.email === dto.identifier) {
+    if (learner.employeeId === dto.identifier) {
+      channel = OtpChannel.EMAIL;
+      channel = OtpChannel.SMS;
+    } else if (learner.email === dto.identifier) {
       channel = OtpChannel.EMAIL;
     } else {
       channel = OtpChannel.SMS;
@@ -738,9 +737,14 @@ export class LearnerAuthService {
 
     return {
       message: `OTP sent successfully to your ${channel === OtpChannel.EMAIL ? 'email' : 'phone number'}`,
+      otp,
       channel,
     };
   }
+
+  // =========================================================
+  // VERIFY PASSWORD OTP
+  // =========================================================
 
   async verifyPasswordOtp(dto: LearnerPasswordVerifyOtpDto) {
     const learner = await this.prisma.learner.findFirst({
@@ -813,6 +817,10 @@ export class LearnerAuthService {
       },
     };
   }
+
+  // =========================================================
+  // RESET PASSWORD
+  // =========================================================
 
   async resetPassword(dto: LearnerResetPasswordDto) {
     let payload: {
