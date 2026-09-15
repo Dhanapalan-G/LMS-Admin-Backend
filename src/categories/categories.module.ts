@@ -2,9 +2,9 @@ import { Module } from '@nestjs/common';
 
 import { AdminCategoriesController } from './controllers/admin-categories.controller';
 import { CategoriesService } from './categories.service';
-import { AdminAuthModule } from '../auth/admin/admin-auth.module';
+import { AuthModule } from '../auth/auth.module';
 @Module({
-  imports: [AdminAuthModule],
+  imports: [AuthModule],
   controllers: [AdminCategoriesController],
   providers: [CategoriesService],
   exports: [CategoriesService],

@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { LearnerTypesController } from './learner-type.controller';
 import { LearnerTypesService } from './learner-type.service';
-import { AdminAuthModule } from '../auth/admin/admin-auth.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [AdminAuthModule],
+  imports: [AuthModule],
   controllers: [LearnerTypesController],
   providers: [LearnerTypesService],
   exports: [LearnerTypesService],

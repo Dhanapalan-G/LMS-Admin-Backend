@@ -145,7 +145,7 @@ export class LearnersService {
 
         employeeId: dto.employeeId,
         board: dto.board,
-        department: dto.department,
+        departmentId: dto.departmentId,
 
         dateOfJoining: dto.dateOfJoining
           ? new Date(dto.dateOfJoining)
@@ -326,7 +326,7 @@ export class LearnersService {
       phone: dto.phone,
       employeeId: dto.employeeId,
       board: dto.board,
-      department: dto.department,
+      departmentId: dto.departmentId,
       learnerTypeId: dto.learnerTypeId,
       schoolId,
     };

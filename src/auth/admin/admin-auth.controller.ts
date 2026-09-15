@@ -19,7 +19,7 @@ import { AdminForgotPasswordDto } from './dto/admin-forgot-password.dto';
 import { AdminResetPasswordDto } from './dto/admin-reset-password.dto';
 import { AdminPasswordVerifyOtpDto } from './dto/admin-password-verify-otp.dto';
 
-@ApiTags('Admin Authentication')
+@ApiTags('Admin - Authentication')
 @Controller('admin/auth')
 export class AdminAuthController {
   constructor(private readonly adminAuthService: AdminAuthService) {}

@@ -25,10 +25,10 @@ export class LearnerUpdateProfileDto {
   @IsString()
   board?: string;
 
-  @ApiPropertyOptional({ example: 'Computer Science' })
+  @ApiPropertyOptional({ example: 'Department Id' })
   @IsOptional()
   @IsString()
-  department?: string;
+  departmentId?: string;
 
   @ApiPropertyOptional({ example: '2026-06-01' })
   @IsOptional()

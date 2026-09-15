@@ -13,6 +13,9 @@ import { AuthModule } from './auth/auth.module';
 import { AdminsModule } from './admin/admins/admins.module';
 import { LearnersModule } from './admin/learners/learners.module';
 import { LessonsModule } from './lessons/lessons.module';
+import { QuizzesModule } from './quizess/quizzes.module';
+import { LearnerAuthModule } from './auth/learner/learner-auth.module';
+import { DepartmentsModule } from './departments/departments.module';
 
 @Module({
   imports: [
@@ -37,7 +40,11 @@ import { LessonsModule } from './lessons/lessons.module';
 
     LearnersModule,
 
+    LearnerTypesModule,
+
     SchoolsModule,
+
+    DepartmentsModule,
 
     CategoriesModule,
 
@@ -47,7 +54,9 @@ import { LessonsModule } from './lessons/lessons.module';
 
     LessonsModule,
 
-    LearnerTypesModule,
+    QuizzesModule,
+
+    LearnerAuthModule,
   ],
   // controllers: [AppController],
   // providers: [AppService],

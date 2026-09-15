@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ModuleStatus } from '../../generated/prisma/enums';
 
 export class ModuleResponseDto {
   @ApiProperty({
@@ -15,6 +16,11 @@ export class ModuleResponseDto {
     example: 'Learn the fundamentals of Node.js',
   })
   description?: string | null;
+
+  @ApiPropertyOptional({
+    example: 'DRAFT',
+  })
+  status?: ModuleStatus;
 
   @ApiProperty({
     example: 1,

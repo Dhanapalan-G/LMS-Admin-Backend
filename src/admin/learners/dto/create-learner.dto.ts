@@ -47,11 +47,10 @@ export class CreateLearnerDto {
   @ApiPropertyOptional({
     example: 'EMP001',
   })
-
-@ApiProperty({ example: 'EMP001' })
-@IsString()
-@MinLength(3)
-employeeId: string;
+  @ApiProperty({ example: 'EMP001' })
+  @IsString()
+  @MinLength(3)
+  employeeId: string;
 
   @ApiPropertyOptional({
     example: 'CBSE',
@@ -61,11 +60,11 @@ employeeId: string;
   board?: string;
 
   @ApiPropertyOptional({
-    example: 'Computer Science',
+    example: 'Department Id',
   })
   @IsOptional()
   @IsString()
-  department?: string;
+  departmentId?: string;
 
   @ApiPropertyOptional({
     example: '2026-06-01',

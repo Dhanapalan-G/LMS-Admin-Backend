@@ -12,7 +12,6 @@ import { LearnerAuthModule } from './learner/learner-auth.module';
 @Global()
 @Module({
   imports: [
-    LearnerAuthModule,
     PassportModule.register({
       defaultStrategy: 'jwt',
     }),

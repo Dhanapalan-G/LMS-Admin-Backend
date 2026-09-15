@@ -71,12 +71,12 @@ export class LearnerRegisterDto {
   board?: string;
 
   @ApiPropertyOptional({
-    example: 'Computer Science',
+    example: 'Department Id',
     description: 'Department',
   })
   @IsOptional()
   @IsString()
-  department?: string;
+  departmentId?: string;
 
   @ApiPropertyOptional({
     example: '2026-06-01',
