@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsArray,
   IsBoolean,
   IsEnum,
   IsInt,
@@ -7,8 +8,12 @@ import {
   IsOptional,
   IsString,
   Min,
+  ValidateNested,
 } from 'class-validator';
-import { LessonType } from '../../generated/prisma/client';
+import { Type } from 'class-transformer';
+
+import { LessonStatus, LessonType } from '../../generated/prisma/client';
+import { CreateLessonFileDto } from './create-lesson-file.dto';
 
 export class CreateLessonDto {
   @ApiProperty({
@@ -31,6 +36,14 @@ export class CreateLessonDto {
   })
   @IsEnum(LessonType)
   type: LessonType;
+
+  @ApiPropertyOptional({
+    enum: LessonStatus,
+    example: LessonStatus.DRAFT,
+  })
+  @IsOptional()
+  @IsEnum(LessonStatus)
+  status?: LessonStatus;
 
   @ApiPropertyOptional({
     example: 'https://example.com/video/photosynthesis.mp4',
@@ -65,4 +78,14 @@ export class CreateLessonDto {
   @IsBoolean()
   @IsOptional()
   isRequired?: boolean;
+
+  @ApiPropertyOptional({
+    type: [CreateLessonFileDto],
+    description: 'Files associated with this lesson.',
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateLessonFileDto)
+  @IsOptional()
+  files?: CreateLessonFileDto[];
 }

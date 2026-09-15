@@ -1,10 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsArray,
+  IsBoolean,
+  IsDateString,
   IsEnum,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUrl,
   IsUUID,
   Min,
 } from 'class-validator';
@@ -46,4 +50,47 @@ export class CreateCourseDto {
   @IsInt()
   @Min(1)
   durationMinutes?: number;
+
+  @ApiProperty({
+    example: [
+      'learner type id',
+      '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
+    ],
+    description: 'Learner type IDs targeted for this course.',
+    type: [String],
+  })
+  @IsArray()
+  @IsUUID('4', { each: true })
+  targetRoles: string[];
+
+  @ApiPropertyOptional({
+    example: '2026-12-31',
+    description: 'Course completion due date.',
+  })
+  @IsOptional()
+  @IsDateString()
+  dueDate?: string;
+
+  @ApiPropertyOptional({
+    example: false,
+    default: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  isMandatory?: boolean;
+
+  @ApiPropertyOptional({
+    example: 'CBSE',
+    description: 'Applicable education board.',
+  })
+  @IsString()
+  @IsOptional()
+  board?: string;
+
+  @ApiPropertyOptional({
+    example: 'https://example.com/course-thumbnail.jpg',
+  })
+  @IsOptional()
+  @IsUrl()
+  thumbnail?: string;
 }

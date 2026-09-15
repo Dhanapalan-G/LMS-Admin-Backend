@@ -26,6 +26,7 @@ export class ModulesService {
       data: {
         title: dto.title,
         description: dto.description,
+        status: dto.status,
         orderIndex: dto.orderIndex,
         courseId,
       },
@@ -33,6 +34,7 @@ export class ModulesService {
         id: true,
         title: true,
         description: true,
+        status: true,
         orderIndex: true,
       },
     });
@@ -78,6 +80,7 @@ export class ModulesService {
           id: true,
           title: true,
           description: true,
+          status: true,
           orderIndex: true,
         },
       }),
@@ -127,6 +130,7 @@ export class ModulesService {
         id: true,
         title: true,
         description: true,
+        status: true,
         orderIndex: true,
       },
     });

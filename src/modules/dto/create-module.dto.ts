@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { ModuleStatus } from '../../generated/prisma/enums';
 
 export class CreateModuleDto {
   @ApiProperty({
@@ -14,6 +15,14 @@ export class CreateModuleDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiPropertyOptional({
+    enum: ModuleStatus,
+    example: ModuleStatus.DRAFT,
+  })
+  @IsOptional()
+  @IsEnum(ModuleStatus)
+  status?: ModuleStatus;
 
   @ApiProperty({
     example: 1,

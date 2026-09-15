@@ -46,6 +46,7 @@ model School {
   learners     Learner[]
   learnerTypes LearnerType[]
   courses      Course[]
+  departments  Department[]
 }
 
 model Learner {
@@ -57,9 +58,9 @@ model Learner {
   password         String
   passwordSet      Boolean                  @default(false)
   learnerTypeId    String
+  departmentId     String?
   employeeId       String
   board            String?
-  department       String?
   dateOfJoining    DateTime?
   status           LearnerStatus            @default(PENDING_APPROVAL)
   rejectionReason  String?
@@ -74,6 +75,7 @@ model Learner {
   enrollments      Enrollment[]
   learnerType      LearnerType              @relation(fields: [learnerTypeId], references: [id])
   school           School                   @relation(fields: [schoolId], references: [id])
+  department       Department?              @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   otpVerifications LearnerOtpVerification[]
   refreshTokens    LearnerRefreshToken[]
   progress         LessonProgress[]
@@ -87,15 +89,16 @@ model Learner {
 }
 
 model LearnerType {
-  id        String    @id @default(uuid())
-  schoolId  String
-  name      String
-  code      String
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  learners  Learner[]
-  school    School    @relation(fields: [schoolId], references: [id])
+  id                String             @id @default(uuid())
+  schoolId          String
+  name              String
+  code              String
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  learners          Learner[]
+  courseTargetRoles CourseTargetRole[]
+  school            School             @relation(fields: [schoolId], references: [id])
 
   @@unique([schoolId, code])
   @@index([schoolId])
@@ -106,7 +109,7 @@ model AdminOtpVerification {
   adminUserId String
   codeHash    String
   purpose     OtpPurpose @default(LOGIN)
-  channel    OtpChannel
+  channel     OtpChannel
   expiresAt   DateTime
   verifiedAt  DateTime?
   revokedAt   DateTime?
@@ -127,7 +130,7 @@ model LearnerOtpVerification {
   learnerId   String
   codeHash    String
   purpose     OtpPurpose @default(LOGIN)
-  channel    OtpChannel
+  channel     OtpChannel
   expiresAt   DateTime
   verifiedAt  DateTime?
   revokedAt   DateTime?
@@ -182,25 +185,29 @@ model Category {
 }
 
 model Course {
-  id              String         @id @default(uuid())
-  categoryId      String         @db.Uuid
+  id              String             @id @default(uuid())
+  categoryId      String             @db.Uuid
   schoolId        String
   createdById     String
   title           String
   code            String?
   description     String?
   thumbnail       String?
-  status          CourseStatus   @default(DRAFT)
+  dueDate         DateTime?
+  isMandatory     Boolean            @default(false)
+  board           String?
+  status          CourseStatus       @default(DRAFT)
   durationMinutes Int?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  targetRoles     CourseTargetRole[]
   certificates    Certificate[]
   modules         CourseModule[]
   enrollments     Enrollment[]
   quiz            Quiz?
-  category        Category       @relation(fields: [categoryId], references: [id])
-  createdBy       AdminUser      @relation("CourseCreatedBy", fields: [createdById], references: [id])
-  school          School         @relation(fields: [schoolId], references: [id])
+  category        Category           @relation(fields: [categoryId], references: [id])
+  createdBy       AdminUser          @relation("CourseCreatedBy", fields: [createdById], references: [id])
+  school          School             @relation(fields: [schoolId], references: [id])
 
   @@index([categoryId])
   @@index([schoolId])
@@ -209,15 +216,49 @@ model Course {
   @@map("courses")
 }
 
+model CourseTargetRole {
+  id            String @id @default(uuid())
+  courseId      String
+  learnerTypeId String
+
+  course      Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  learnerType LearnerType @relation(fields: [learnerTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, learnerTypeId])
+  @@index([courseId])
+  @@index([learnerTypeId])
+}
+
+model Department {
+  id       String @id @default(uuid())
+  schoolId String
+
+  name        String
+  code        String?
+  description String?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school   School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  learners Learner[]
+
+  @@unique([schoolId, name])
+  @@index([schoolId])
+}
+
 model CourseModule {
-  id          String   @id @default(uuid())
+  id          String       @id @default(uuid())
   courseId    String
   title       String
   description String?
-  orderIndex  Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  status      ModuleStatus @default(DRAFT)
+  orderIndex  Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  course      Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
   lessons     Lesson[]
 
   @@index([courseId])
@@ -228,6 +269,7 @@ model Lesson {
   moduleId    String
   title       String
   description String?
+  status      LessonStatus     @default(DRAFT)
   type        LessonType
   content     String?
   position    Int
@@ -239,6 +281,7 @@ model Lesson {
   module      CourseModule     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   files       LessonFile[]
   progress    LessonProgress[]
+  quiz        Quiz?
 
   @@index([moduleId])
 }
@@ -306,28 +349,37 @@ model Bookmark {
 
 model Quiz {
   id           String         @id @default(uuid())
-  courseId     String         @unique
+  courseId     String?        @unique
+  lessonId     String?        @unique
   title        String
   description  String?
   passingScore Float?
   status       QuizStatus     @default(DRAFT)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
-  course       Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course       Course?        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lesson       Lesson?        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   attempts     QuizAttempt[]
   questions    QuizQuestion[]
+
+  @@index([courseId])
+  @@index([lessonId])
 }
 
 model QuizQuestion {
-  id        String       @id @default(uuid())
-  quizId    String
-  question  String
-  position  Int
-  marks     Float        @default(1)
-  createdAt DateTime     @default(now())
-  answers   QuizAnswer[]
-  options   QuizOption[]
-  quiz      Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  id               String          @id @default(uuid())
+  quizId           String
+  question         String
+  questionType     QuestionType    @default(MCQ)
+  questionMediaUrl String?
+  position         Int
+  marks            Float           @default(1)
+  explanation      String?
+  createdAt        DateTime        @default(now())
+  matchPairs       QuizMatchPair[]
+  answers          QuizAnswer[]
+  options          QuizOption[]
+  quiz             Quiz            @relation(fields: [quizId], references: [id], onDelete: Cascade)
 
   @@index([quizId])
 }
@@ -339,6 +391,18 @@ model QuizOption {
   position   Int
   isCorrect  Boolean      @default(false)
   answers    QuizAnswer[]
+  question   QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+}
+
+model QuizMatchPair {
+  id         String       @id @default(uuid())
+  questionId String
+  columnA    String
+  columnB    String
+  position   Int
+  createdAt  DateTime     @default(now())
   question   QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@index([questionId])
@@ -495,6 +559,18 @@ enum CourseStatus {
   ARCHIVED
 }
 
+enum LessonStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ModuleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 enum LessonType {
   VIDEO
   PDF
@@ -513,6 +589,14 @@ enum ProgressStatus {
 enum QuizStatus {
   DRAFT
   PUBLISHED
+}
+
+enum QuestionType {
+  MCQ
+  TRUE_FALSE
+  MATCH_THE_FOLLOWING
+  IMAGE_BASED
+  AUDIO_BASED
 }
 
 enum ImportStatus {

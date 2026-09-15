@@ -30,7 +30,7 @@ import { LearnerResetPasswordDto } from './dto/learner-reset-password.dto';
 import { LearnerSendOtpDto } from './dto/learner-send-otp.dto';
 import { LearnerForgotPasswordDto } from './dto/learner-forget-password.dto';
 
-@ApiTags('Learner Authentication')
+@ApiTags('Learner - Authentication')
 @Controller('learner/auth')
 export class LearnerAuthController {
   constructor(private readonly learnerAuthService: LearnerAuthService) {}

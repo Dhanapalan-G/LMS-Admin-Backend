@@ -109,7 +109,7 @@ export class LearnerAuthService {
 
         employeeId: dto.employeeId,
         board: dto.board,
-        department: dto.department,
+        departmentId: dto.departmentId,
 
         dateOfJoining: dto.dateOfJoining
           ? new Date(dto.dateOfJoining)
@@ -596,8 +596,8 @@ export class LearnerAuthService {
           board: dto.board,
         }),
 
-        ...(dto.department !== undefined && {
-          department: dto.department,
+        ...(dto.departmentId !== undefined && {
+          departmentId: dto.departmentId,
         }),
 
         ...(dto.dateOfJoining !== undefined && {
@@ -615,7 +615,6 @@ export class LearnerAuthService {
         department: true,
         dateOfJoining: true,
         status: true,
-
         school: {
           select: {
             id: true,
