@@ -76,6 +76,7 @@ export class DepartmentsService {
     return this.prisma.department.findMany({
       where: {
         schoolId,
+        isActive: true,
       },
       orderBy: {
         name: 'asc',
@@ -87,8 +88,6 @@ export class DepartmentsService {
         code: true,
         description: true,
         isActive: true,
-        createdAt: true,
-        updatedAt: true,
       },
     });
   }
@@ -110,8 +109,6 @@ export class DepartmentsService {
         code: true,
         description: true,
         isActive: true,
-        createdAt: true,
-        updatedAt: true,
 
         _count: {
           select: {

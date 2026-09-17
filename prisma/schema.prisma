@@ -589,6 +589,7 @@ enum ProgressStatus {
 enum QuizStatus {
   DRAFT
   PUBLISHED
+  ARCHIVED
 }
 
 enum QuestionType {

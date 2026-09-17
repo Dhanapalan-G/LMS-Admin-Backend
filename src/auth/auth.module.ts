@@ -2,20 +2,19 @@ import { Global, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
-
-import { PrismaModule } from '../prisma/prisma.module';
-
 import { TokenService } from './token.service';
 import { JwtStrategy } from './jwt.strategy';
-import { LearnerAuthModule } from './learner/learner-auth.module';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
+import { SmsModule } from '../notifications/sms/sms.module';
+import { EmailModule } from '../notifications/email/email.module';
 
 @Global()
 @Module({
   imports: [
-    PassportModule.register({
-      defaultStrategy: 'jwt',
-    }),
-
+    SmsModule,
+    EmailModule,
+    PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -24,9 +23,9 @@ import { LearnerAuthModule } from './learner/learner-auth.module';
       }),
     }),
   ],
+  controllers: [AuthController],
 
-  providers: [TokenService, JwtStrategy],
-
-  exports: [PassportModule, JwtModule, TokenService, JwtStrategy],
+  providers: [AuthService, TokenService, JwtStrategy],
+  exports: [AuthService, PassportModule, JwtModule, TokenService, JwtStrategy],
 })
 export class AuthModule {}
