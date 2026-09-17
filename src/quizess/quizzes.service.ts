@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateQuizDto, CreateQuizQuestionDto } from './dto/create-quiz.dto';
 
 import { QuestionType } from '../generated/prisma/enums';
+import { UpdateQuizDto } from './dto/update-quiz.dto';
 
 type QuizParent =
   | {
@@ -428,5 +429,244 @@ export class QuizzesService {
         `${question.questionType} question must have exactly one correct option`,
       );
     }
+  }
+
+  async updateForLesson(
+    courseId: string,
+    moduleId: string,
+    lessonId: string,
+    dto: UpdateQuizDto,
+  ) {
+    // -------------------------------------------------------
+    // 1. Verify lesson belongs to module and course
+    // -------------------------------------------------------
+
+    const lesson = await this.prisma.lesson.findFirst({
+      where: {
+        id: lessonId,
+        moduleId,
+        module: {
+          id: moduleId,
+          courseId,
+        },
+      },
+      select: {
+        id: true,
+        quiz: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (!lesson) {
+      throw new NotFoundException('Lesson not found');
+    }
+
+    // -------------------------------------------------------
+    // 2. Verify quiz exists
+    // -------------------------------------------------------
+
+    if (!lesson.quiz) {
+      throw new NotFoundException('Quiz not found for this lesson');
+    }
+
+    // -------------------------------------------------------
+    // 3. Common update
+    // -------------------------------------------------------
+
+    return this.updateQuiz(lesson.quiz.id, dto);
+  }
+
+  async updateForCourse(courseId: string, dto: UpdateQuizDto) {
+    // -------------------------------------------------------
+    // 1. Verify course and quiz
+    // -------------------------------------------------------
+
+    const course = await this.prisma.course.findUnique({
+      where: {
+        id: courseId,
+      },
+      select: {
+        id: true,
+        quiz: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    // -------------------------------------------------------
+    // 2. Verify quiz exists
+    // -------------------------------------------------------
+
+    if (!course.quiz) {
+      throw new NotFoundException('Quiz not found for this course');
+    }
+
+    // -------------------------------------------------------
+    // 3. Common update
+    // -------------------------------------------------------
+
+    return this.updateQuiz(course.quiz.id, dto);
+  }
+
+  private async updateQuiz(quizId: string, dto: UpdateQuizDto) {
+    // -------------------------------------------------------
+    // 1. Validate questions if supplied
+    // -------------------------------------------------------
+
+    if (dto.questions) {
+      this.validateQuestions(dto.questions);
+    }
+
+    // -------------------------------------------------------
+    // 2. Update quiz
+    // -------------------------------------------------------
+
+    return this.prisma.quiz.update({
+      where: {
+        id: quizId,
+      },
+      data: {
+        title: dto.title,
+        description: dto.description,
+        passingScore: dto.passingScore,
+        status: dto.status,
+      },
+
+      select: {
+        id: true,
+        courseId: true,
+        lessonId: true,
+        title: true,
+        description: true,
+        passingScore: true,
+        status: true,
+
+        questions: {
+          orderBy: {
+            position: 'asc',
+          },
+
+          select: {
+            id: true,
+            question: true,
+            questionType: true,
+            questionMediaUrl: true,
+            position: true,
+            marks: true,
+            explanation: true,
+
+            options: {
+              orderBy: {
+                position: 'asc',
+              },
+
+              select: {
+                id: true,
+                optionText: true,
+                position: true,
+                isCorrect: true,
+              },
+            },
+
+            matchPairs: {
+              orderBy: {
+                position: 'asc',
+              },
+
+              select: {
+                id: true,
+                columnA: true,
+                columnB: true,
+                position: true,
+              },
+            },
+          },
+        },
+
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
+  async deleteForLesson(courseId: string, moduleId: string, lessonId: string) {
+    const lesson = await this.prisma.lesson.findFirst({
+      where: {
+        id: lessonId,
+        moduleId,
+        module: {
+          id: moduleId,
+          courseId,
+        },
+      },
+      select: {
+        id: true,
+        quiz: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (!lesson) {
+      throw new NotFoundException('Lesson not found');
+    }
+
+    if (!lesson.quiz) {
+      throw new NotFoundException('Quiz not found for this lesson');
+    }
+
+    return this.deleteQuiz(lesson.quiz.id);
+  }
+
+  async deleteForCourse(courseId: string) {
+    const course = await this.prisma.course.findUnique({
+      where: {
+        id: courseId,
+      },
+      select: {
+        id: true,
+        quiz: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    if (!course.quiz) {
+      throw new NotFoundException('Quiz not found for this course');
+    }
+
+    return this.deleteQuiz(course.quiz.id);
+  }
+
+  private async deleteQuiz(quizId: string) {
+    await this.prisma.quiz.update({
+      where: {
+        id: quizId,
+      },
+      data: {
+        status: 'ARCHIVED',
+      },
+    });
+
+    return {
+      message: 'Quiz archived successfully',
+    };
   }
 }

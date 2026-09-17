@@ -1,4 +1,12 @@
-import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 
 import {
   ApiBearerAuth,
@@ -20,6 +28,7 @@ import { AuthType } from '../auth/decorators/auth-type.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 
 import { AdminRole } from '../generated/prisma/enums';
+import { UpdateQuizDto } from './dto/update-quiz.dto';
 
 @ApiTags('Admin - Lesson Quizzes')
 @ApiBearerAuth('access-token')
@@ -390,5 +399,151 @@ export class QuizzesController {
     @Body() dto: CreateQuizDto,
   ) {
     return this.quizzesService.createForCourse(courseId, dto);
+  }
+
+  @Patch('modules/:moduleId/lessons/:lessonId/quiz')
+  @ApiOperation({
+    summary: 'Update lesson quiz',
+    description: 'Updates the quiz details associated with a lesson.',
+  })
+  @ApiParam({
+    name: 'courseId',
+    description: 'Course ID',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @ApiParam({
+    name: 'moduleId',
+    description: 'Module ID',
+    example: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
+  })
+  @ApiParam({
+    name: 'lessonId',
+    description: 'Lesson ID',
+    example: '7ba7b810-9dad-11d1-80b4-00c04fd430c8',
+  })
+  @ApiBody({
+    type: UpdateQuizDto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lesson quiz updated successfully.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Lesson or quiz not found.',
+  })
+  async updateLessonQuiz(
+    @Param('courseId') courseId: string,
+    @Param('moduleId') moduleId: string,
+    @Param('lessonId') lessonId: string,
+    @Body() dto: UpdateQuizDto,
+  ) {
+    return this.quizzesService.updateForLesson(
+      courseId,
+      moduleId,
+      lessonId,
+      dto,
+    );
+  }
+
+  @Patch(':courseId/quiz')
+  @ApiOperation({
+    summary: 'Update course quiz',
+    description: 'Updates the quiz details associated with a course.',
+  })
+  @ApiParam({
+    name: 'courseId',
+    description: 'Course ID',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @ApiBody({
+    type: UpdateQuizDto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Course quiz updated successfully.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Course or quiz not found.',
+  })
+  async updateCourseQuiz(
+    @Param('courseId') courseId: string,
+    @Body() dto: UpdateQuizDto,
+  ) {
+    return this.quizzesService.updateForCourse(courseId, dto);
+  }
+
+  @Delete('modules/:moduleId/lessons/:lessonId/quiz')
+  @ApiOperation({
+    summary: 'Delete lesson quiz',
+    description: 'Archives the quiz associated with a lesson.',
+  })
+  @ApiParam({
+    name: 'courseId',
+    description: 'Course ID',
+  })
+  @ApiParam({
+    name: 'moduleId',
+    description: 'Module ID',
+  })
+  @ApiParam({
+    name: 'lessonId',
+    description: 'Lesson ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lesson quiz archived successfully.',
+    schema: {
+      example: {
+        success: true,
+        message: 'Lesson quiz archived successfully',
+        data: {
+          message: 'Quiz archived successfully',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Lesson or quiz not found.',
+  })
+  async deleteLessonQuiz(
+    @Param('courseId') courseId: string,
+    @Param('moduleId') moduleId: string,
+    @Param('lessonId') lessonId: string,
+  ) {
+    return this.quizzesService.deleteForLesson(courseId, moduleId, lessonId);
+  }
+
+  @Delete('quiz')
+  @ApiOperation({
+    summary: 'Delete course quiz',
+    description: 'Archives the quiz associated with a course.',
+  })
+  @ApiParam({
+    name: 'courseId',
+    description: 'Course ID',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Course quiz archived successfully.',
+    schema: {
+      example: {
+        success: true,
+        message: 'Course quiz archived successfully',
+        data: {
+          message: 'Quiz archived successfully',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Course or quiz not found.',
+  })
+  async deleteCourseQuiz(@Param('courseId') courseId: string) {
+    return this.quizzesService.deleteForCourse(courseId);
   }
 }

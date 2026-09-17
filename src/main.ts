@@ -29,6 +29,7 @@ async function bootstrap() {
     .setTitle('Learning Platform API')
     .setDescription('API documentation for the Learning Platform')
     .setVersion('1.0')
+    .addTag('Admin Api List')
     .addBearerAuth(
       {
         type: 'http',
