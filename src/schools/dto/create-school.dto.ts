@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsBoolean, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class CreateSchoolDto {
   @ApiProperty({
@@ -19,4 +19,18 @@ export class CreateSchoolDto {
   @IsString()
   @MinLength(2)
   code: string;
+
+  @ApiPropertyOptional({
+    example: 'CBSE',
+  })
+  @IsString()
+  board: string;
+
+  @ApiPropertyOptional({
+    example: 'true',
+    description: 'School status',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }

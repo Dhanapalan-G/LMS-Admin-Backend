@@ -1,31 +1,47 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateDepartmentDto {
   @ApiProperty({
-    example: 'Mathematics',
-    description: 'Department name',
+    example: 'Computer Science',
   })
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
   name: string;
 
-  @ApiPropertyOptional({
-    example: 'MATH',
-    description: 'Optional department code',
+  @ApiProperty({
+    example: 'DEPT006',
   })
-  @IsOptional()
   @IsString()
-  @MaxLength(20)
-  code?: string;
+  @IsNotEmpty()
+  @MaxLength(50)
+  code: string;
 
   @ApiPropertyOptional({
-    example: 'Mathematics department',
-    description: 'Department description',
+    example: 'Computer Science Department',
   })
   @IsOptional()
   @IsString()
-  @MaxLength(500)
   description?: string;
+
+  @ApiProperty({
+    example: [
+      '550e8400-e29b-41d4-a716-446655440000',
+      '660e8400-e29b-41d4-a716-446655440000',
+    ],
+    type: [String],
+  })
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsUUID('4', { each: true })
+  schoolIds: string[];
 }

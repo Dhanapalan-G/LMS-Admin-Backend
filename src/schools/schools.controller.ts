@@ -87,66 +87,59 @@ export class SchoolsController {
   @Get()
   @ApiOperation({
     summary: 'Get all schools',
-    description: 'Returns a paginated list of schools.',
+    description:
+      'Returns paginated schools with learner counts, completion percentage and filters.',
   })
   @ApiQuery({
     name: 'page',
     required: false,
-    type: Number,
     example: 1,
-    description: 'Page number. Defaults to 1.',
   })
   @ApiQuery({
     name: 'limit',
     required: false,
-    type: Number,
     example: 10,
-    description: 'Number of records per page. Defaults to 10. Maximum 100.',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Search by school name or code',
+    example: 'SBOA',
+  })
+  @ApiQuery({
+    name: 'board',
+    required: false,
+    description: 'Filter by school board',
+    example: 'CBSE',
+  })
+  @ApiQuery({
+    name: 'isActive',
+    required: false,
+    example: true,
   })
   @ApiResponse({
     status: 200,
-    description: 'Schools retrieved successfully.',
-    schema: {
-      example: {
-        success: true,
-        message: 'Request successful',
-        data: {
-          items: [
-            {
-              id: 'school-id-1',
-              name: 'St. Xavier School',
-              code: 'SXS001',
-            },
-          ],
-          meta: {
-            page: 1,
-            limit: 10,
-            total: 1,
-            totalPages: 1,
-            hasNextPage: false,
-            hasPreviousPage: false,
-          },
-        },
-      },
-    },
+    description: 'Schools fetched successfully.',
   })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized. Access token is missing or invalid.',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden. User does not have permission.',
-  })
-  async findAll(@Query() paginationDto: PaginationDto) {
-    return this.schoolsService.findAll(paginationDto);
+  async findAll(
+    @Query() paginationDto: PaginationDto,
+    @Query('search') search?: string,
+    @Query('board') board?: string,
+    @Query('isActive') isActive?: string,
+  ) {
+    return this.schoolsService.findAll(
+      paginationDto,
+      search,
+      board,
+      isActive !== undefined ? isActive === 'true' : undefined,
+    );
   }
 
   @Get(':id')
   @ApiOperation({
     summary: 'Get school by ID',
     description:
-      'Returns school details including the number of users and courses.',
+      'Returns school details including learner statistics, completion, certification, overdue learners, assigned roles, and departments.',
   })
   @ApiParam({
     name: 'id',
@@ -163,12 +156,54 @@ export class SchoolsController {
         message: 'Request successful',
         data: {
           id: 'school-id',
-          name: 'St. Xavier School',
-          code: 'SXS001',
-          _count: {
-            users: 125,
-            courses: 18,
+          name: 'SBOA School & Junior College, Chennai',
+          code: 'SBOA001',
+          board: 'CBSE',
+
+          statistics: {
+            totalLearners: 142,
+            activeLearners: 138,
+            completionPercentage: 78,
+            certifiedLearners: 94,
+            overdueLearners: 12,
           },
+
+          publishingStatus: 'ACTIVE',
+
+          assignedRoles: [
+            {
+              id: 'learner-type-1',
+              name: 'Prime Members',
+            },
+            {
+              id: 'learner-type-2',
+              name: 'Principal',
+            },
+            {
+              id: 'learner-type-3',
+              name: 'Teacher',
+            },
+          ],
+
+          assignedDepartments: [
+            {
+              id: 'department-1',
+              name: 'Maths',
+              code: 'MATH',
+            },
+            {
+              id: 'department-2',
+              name: 'Science',
+              code: 'SCI',
+            },
+            {
+              id: 'department-3',
+              name: 'English',
+              code: 'ENG',
+            },
+          ],
+
+          overallCompletion: 78,
         },
       },
     },

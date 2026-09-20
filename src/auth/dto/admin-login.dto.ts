@@ -7,7 +7,7 @@ export class AdminLoginDto {
   @IsString()
   employeeId: string;
 
-  @ApiProperty({ example: 'Password@123' })
+  @ApiProperty({ example: 'Admin@123' })
   @IsString()
   @MinLength(8)
   password: string;

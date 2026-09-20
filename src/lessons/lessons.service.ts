@@ -294,6 +294,7 @@ export class LessonsService {
         fileSize: file.fileSize !== null ? Number(file.fileSize) : null,
       })),
     }));
+    const totalPages = Math.ceil(total / limit);
 
     return {
       items,
@@ -302,7 +303,9 @@ export class LessonsService {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
       },
     };
   }

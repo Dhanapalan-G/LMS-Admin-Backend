@@ -13,20 +13,22 @@ import {
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 
-import { CategoriesService } from '../categories.service';
-import { CreateCategoryDto } from '../dto/create-category.dto';
-import { UpdateCategoryDto } from '../dto/update-category.dto';
-import { PaginationDto } from '../../common/dto/pagination.dto';
-import { AuthTypeGuard } from '../../auth/guards/auth-type.guard';
-import { AuthType } from '../../auth/decorators/auth-type.decorator';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { Roles } from '../../auth/decorators/roles.decorator';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { AdminRole } from '../../generated/prisma/client';
+import { CategoriesService } from './categories.service';
+import { CreateCategoryDto } from './dto/create-category.dto';
+import { UpdateCategoryDto } from './dto/update-category.dto';
+import { PaginationDto } from '../common/dto/pagination.dto';
+import { AuthTypeGuard } from '../auth/guards/auth-type.guard';
+import { AuthType } from '../auth/decorators/auth-type.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { AdminRole, CategoryStatus } from '../generated/prisma/client';
+import { CategoryQueryDto } from './dto/category-query.dto';
 
 @ApiTags('Admin - Categories')
 @ApiBearerAuth('access-token')
@@ -69,7 +71,57 @@ export class AdminCategoriesController {
   @Get()
   @ApiOperation({
     summary: 'Get all categories',
-    description: 'Returns a paginated list of categories.',
+    description:
+      'Returns a paginated list of learning categories with search and filters for learner role, school, department, and status.',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    example: 1,
+    description: 'Page number',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    example: 10,
+    description: 'Number of categories per page',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    example: 'Leadership',
+    description: 'Search by category name or description',
+  })
+  @ApiQuery({
+    name: 'roleId',
+    required: false,
+    type: String,
+    example: 'role-uuid',
+    description: 'Filter categories by learner role',
+  })
+  @ApiQuery({
+    name: 'schoolId',
+    required: false,
+    type: String,
+    example: 'school-uuid',
+    description: 'Filter categories by school',
+  })
+  @ApiQuery({
+    name: 'departmentId',
+    required: false,
+    type: String,
+    example: 'department-uuid',
+    description: 'Filter categories by department',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: CategoryStatus,
+    example: CategoryStatus.ACTIVE,
+    description: 'Filter categories by status',
   })
   @ApiResponse({
     status: 200,
@@ -83,8 +135,8 @@ export class AdminCategoriesController {
     status: 403,
     description: 'Forbidden. User does not have permission.',
   })
-  async findAll(@Query() paginationDto: PaginationDto) {
-    return this.categoriesService.findAll(paginationDto);
+  async findAll(@Query() query: CategoryQueryDto) {
+    return this.categoriesService.findAll(query);
   }
 
   @Get(':id')

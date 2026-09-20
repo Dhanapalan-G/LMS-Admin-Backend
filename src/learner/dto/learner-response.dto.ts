@@ -21,7 +21,7 @@ export class LearnerResponseDto {
   passwordSet: boolean;
 
   @ApiProperty()
-  learnerTypeId: string;
+  learnerRoleId: string;
 
   @ApiProperty()
   employeeId: string;

@@ -32,21 +32,23 @@ model AdminUser {
 }
 
 model School {
-  id           String        @id @default(uuid())
-  name         String
-  code         String        @unique
-  address      String?
-  phone        String?
-  email        String?
-  isActive     Boolean       @default(true)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  adminUsers   AdminUser[]
-  imports      ImportJob[]
-  learners     Learner[]
-  learnerTypes LearnerType[]
-  courses      Course[]
-  departments  Department[]
+  id        String   @id @default(uuid())
+  name      String
+  code      String   @unique
+  board     String?
+  address   String?
+  phone     String?
+  email     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  adminUsers        AdminUser[]
+  imports           ImportJob[]
+  learners          Learner[]
+  departments       SchoolDepartment[]
+  learnerRoles      SchoolLearnerRole[]
+  courseAssignments CourseAssignmentSchool[]
 }
 
 model Learner {
@@ -57,10 +59,9 @@ model Learner {
   phone            String?                  @unique
   password         String
   passwordSet      Boolean                  @default(false)
-  learnerTypeId    String
+  learnerRoleId    String
   departmentId     String?
   employeeId       String
-  board            String?
   dateOfJoining    DateTime?
   status           LearnerStatus            @default(PENDING_APPROVAL)
   rejectionReason  String?
@@ -73,7 +74,7 @@ model Learner {
   bookmarks        Bookmark[]
   certificates     Certificate[]
   enrollments      Enrollment[]
-  learnerType      LearnerType              @relation(fields: [learnerTypeId], references: [id])
+  learnerRole      LearnerRole              @relation(fields: [learnerRoleId], references: [id])
   school           School                   @relation(fields: [schoolId], references: [id])
   department       Department?              @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   otpVerifications LearnerOtpVerification[]
@@ -83,25 +84,43 @@ model Learner {
   quizAttempts     QuizAttempt[]
 
   @@index([schoolId])
-  @@index([learnerTypeId])
+  @@index([learnerRoleId])
+  @@index([departmentId])
   @@index([employeeId])
   @@index([status])
 }
 
-model LearnerType {
-  id                String             @id @default(uuid())
-  schoolId          String
-  name              String
-  code              String
-  isActive          Boolean            @default(true)
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  learners          Learner[]
-  courseTargetRoles CourseTargetRole[]
-  school            School             @relation(fields: [schoolId], references: [id])
+model LearnerRole {
+  id          String  @id @default(uuid())
+  name        String
+  code        String  @unique
+  description String?
+  isActive    Boolean @default(true)
 
-  @@unique([schoolId, code])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  learners          Learner[]
+  schoolMappings    SchoolLearnerRole[]
+  courseAssignments CourseAssignmentRole[]
+
+  @@index([name])
+  @@index([isActive])
+}
+
+model SchoolLearnerRole {
+  id            String @id @default(uuid())
+  schoolId      String
+  learnerRoleId String
+
+  createdAt DateTime @default(now())
+
+  school      School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  learnerRole LearnerRole @relation(fields: [learnerRoleId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, learnerRoleId])
   @@index([schoolId])
+  @@index([learnerRoleId])
 }
 
 model AdminOtpVerification {
@@ -173,80 +192,169 @@ model LearnerRefreshToken {
 }
 
 model Category {
-  id          String         @id @default(uuid()) @db.Uuid
+  id          String         @id @default(uuid())
   name        String         @unique
   description String?
   status      CategoryStatus @default(ACTIVE)
   createdAt   DateTime       @default(now()) @map("created_at")
   updatedAt   DateTime       @updatedAt @map("updated_at")
-  courses     Course[]
 
-  @@map("categories")
+  courses                    CourseCategory[]
+  courseAssignmentCategories CourseAssignmentCategory[]
 }
 
 model Course {
-  id              String             @id @default(uuid())
-  categoryId      String             @db.Uuid
-  schoolId        String
+  id              String       @id @default(uuid())
   createdById     String
   title           String
   code            String?
   description     String?
   thumbnail       String?
   dueDate         DateTime?
-  isMandatory     Boolean            @default(false)
-  board           String?
-  status          CourseStatus       @default(DRAFT)
+  isMandatory     Boolean      @default(false)
+  status          CourseStatus @default(DRAFT)
   durationMinutes Int?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  targetRoles     CourseTargetRole[]
-  certificates    Certificate[]
-  modules         CourseModule[]
-  enrollments     Enrollment[]
   quiz            Quiz?
-  category        Category           @relation(fields: [categoryId], references: [id])
-  createdBy       AdminUser          @relation("CourseCreatedBy", fields: [createdById], references: [id])
-  school          School             @relation(fields: [schoolId], references: [id])
 
-  @@index([categoryId])
-  @@index([schoolId])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  certificates Certificate[]
+  modules      CourseModule[]
+  enrollments  Enrollment[]
+
+  categories  CourseCategory[]
+  assignments CourseAssignmentCourse[]
+  createdBy   AdminUser                @relation("CourseCreatedBy", fields: [createdById], references: [id])
+
   @@index([createdById])
   @@index([status])
   @@map("courses")
 }
 
-model CourseTargetRole {
-  id            String @id @default(uuid())
-  courseId      String
-  learnerTypeId String
+model CourseCategory {
+  id         String @id @default(uuid())
+  courseId   String
+  categoryId String
 
-  course      Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  learnerType LearnerType @relation(fields: [learnerTypeId], references: [id], onDelete: Cascade)
+  course   Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
-  @@unique([courseId, learnerTypeId])
+  @@unique([courseId, categoryId])
   @@index([courseId])
-  @@index([learnerTypeId])
+  @@index([categoryId])
 }
 
 model Department {
-  id       String @id @default(uuid())
-  schoolId String
-
+  id          String  @id @default(uuid())
   name        String
-  code        String?
+  code        String  @unique
   description String?
-
-  isActive Boolean @default(true)
+  isActive    Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  school   School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  learners Learner[]
+  learners          Learner[]
+  schoolMappings    SchoolDepartment[]
+  courseAssignments CourseAssignmentDepartment[]
 
-  @@unique([schoolId, name])
+  @@index([name])
+  @@index([isActive])
+}
+
+model SchoolDepartment {
+  id           String @id @default(uuid())
+  schoolId     String
+  departmentId String
+
+  createdAt DateTime @default(now())
+
+  school     School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, departmentId])
   @@index([schoolId])
+  @@index([departmentId])
+}
+
+model CourseAssignment {
+  id      String           @id @default(uuid())
+  status  AssignmentStatus @default(ACTIVE)
+  dueDate DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  schools     CourseAssignmentSchool[]
+  roles       CourseAssignmentRole[]
+  departments CourseAssignmentDepartment[]
+
+  courses    CourseAssignmentCourse[]
+  categories CourseAssignmentCategory[]
+}
+
+model CourseAssignmentCourse {
+  id String @id @default(uuid())
+
+  assignmentId String
+  courseId     String
+
+  assignment CourseAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  course     Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, courseId])
+  @@index([courseId])
+}
+
+model CourseAssignmentCategory {
+  id String @id @default(uuid())
+
+  assignmentId String
+  categoryId   String
+
+  assignment CourseAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  category   Category         @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, categoryId])
+  @@index([categoryId])
+}
+
+model CourseAssignmentSchool {
+  id           String @id @default(uuid())
+  assignmentId String
+  schoolId     String
+
+  assignment CourseAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  school     School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, schoolId])
+  @@index([schoolId])
+}
+
+model CourseAssignmentRole {
+  id            String @id @default(uuid())
+  assignmentId  String
+  learnerRoleId String
+
+  assignment  CourseAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  learnerRole LearnerRole      @relation(fields: [learnerRoleId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, learnerRoleId])
+  @@index([learnerRoleId])
+}
+
+model CourseAssignmentDepartment {
+  id String @id @default(uuid())
+
+  assignmentId String
+  departmentId String
+
+  assignment CourseAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  department Department       @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, departmentId])
+  @@index([departmentId])
 }
 
 model CourseModule {
@@ -305,7 +413,10 @@ model Enrollment {
   learnerId   String
   courseId    String
   enrolledAt  DateTime  @default(now())
+  dueDate     DateTime?
   completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
   learner     Learner   @relation(fields: [learnerId], references: [id], onDelete: Cascade)
 
@@ -557,6 +668,11 @@ enum CourseStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
+}
+
+enum AssignmentStatus {
+  ACTIVE
+  INACTIVE
 }
 
 enum LessonStatus {

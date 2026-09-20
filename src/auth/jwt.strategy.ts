@@ -24,6 +24,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Invalid token');
     }
 
+    // --------------------------------------------------
+    // ADMIN
+    // --------------------------------------------------
+
     if (payload.authType === 'ADMIN') {
       const admin = await this.prisma.adminUser.findUnique({
         where: {
@@ -34,6 +38,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       if (!admin) {
         throw new UnauthorizedException('Admin not found');
       }
+
       if (admin.status !== 'ACTIVE') {
         throw new UnauthorizedException('Admin account is not active');
       }
@@ -48,11 +53,23 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       };
     }
 
+    // --------------------------------------------------
     // LEARNER
+    // --------------------------------------------------
+
     if (payload.authType === 'LEARNER') {
       const learner = await this.prisma.learner.findUnique({
         where: {
           id: payload.sub,
+        },
+
+        select: {
+          id: true,
+          schoolId: true,
+          learnerRoleId: true,
+          name: true,
+          email: true,
+          status: true,
         },
       });
 
@@ -68,11 +85,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         id: learner.id,
         authType: 'LEARNER',
         schoolId: learner.schoolId,
-        learnerTypeId: learner.learnerTypeId,
+        learnerRoleId: learner.learnerRoleId,
         name: learner.name,
         email: learner.email,
       };
     }
+
+    // --------------------------------------------------
+    // INVALID AUTH TYPE
+    // --------------------------------------------------
 
     throw new UnauthorizedException('Invalid authentication type');
   }
