@@ -10,11 +10,10 @@ import { PaginationDto } from '../common/dto/pagination.dto';
 export class ModulesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(courseId: string, dto: CreateModuleDto, schoolId: string) {
+  async create(courseId: string, dto: CreateModuleDto) {
     const course = await this.prisma.course.findFirst({
       where: {
         id: courseId,
-        schoolId,
       },
     });
 

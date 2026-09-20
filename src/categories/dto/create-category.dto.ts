@@ -1,5 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+
+import {
+  IsArray,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
+
+import { CategoryStatus } from '../../generated/prisma/client';
 
 export class CreateCategoryDto {
   @ApiProperty({
@@ -18,4 +28,26 @@ export class CreateCategoryDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiPropertyOptional({
+    example: 'ACTIVE',
+    description: 'Category status',
+    enum: CategoryStatus,
+    default: 'ACTIVE',
+  })
+  @IsOptional()
+  status?: CategoryStatus;
+
+  @ApiPropertyOptional({
+    example: [
+      '32931b50-67c0-4ad6-9b5e-123456789abc',
+      '42931b50-67c0-4ad6-9b5e-123456789abc',
+    ],
+    description: 'Course IDs to assign to this category during creation',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  courseIds?: string[];
 }

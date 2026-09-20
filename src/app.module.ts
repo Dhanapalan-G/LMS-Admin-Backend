@@ -5,7 +5,6 @@ import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
-import { LearnerTypesModule } from './learner-types/learner-type.module';
 import { SchoolsModule } from './schools/schools.module';
 import { DepartmentsModule } from './departments/departments.module';
 import { CategoriesModule } from './categories/categories.module';
@@ -15,6 +14,9 @@ import { LessonsModule } from './lessons/lessons.module';
 import { QuizzesModule } from './quizess/quizzes.module';
 import { LearnersModule } from './learner/learners.module';
 import { AdminModule } from './admin/admin.module';
+import { CourseAssignmentsModule } from './course-assignment/course-assignment.module';
+import { LearnerRolesModule } from './learner-roles/learner-role.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -29,7 +31,7 @@ import { AdminModule } from './admin/admin.module';
     AuthModule,
     AdminModule,
     LearnersModule,
-    LearnerTypesModule,
+    LearnerRolesModule,
     SchoolsModule,
     DepartmentsModule,
     CategoriesModule,
@@ -37,6 +39,8 @@ import { AdminModule } from './admin/admin.module';
     ModulesModule,
     LessonsModule,
     QuizzesModule,
+    CourseAssignmentsModule,
+    DashboardModule,
   ],
 })
 export class AppModule {}

@@ -1,6 +1,8 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 
@@ -8,6 +10,8 @@ import { PrismaService } from '../prisma/prisma.service';
 
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
+import { PaginationDto } from '../common/dto/pagination.dto';
+import { Prisma } from '../generated/prisma/client';
 
 @Injectable()
 export class DepartmentsService {
@@ -16,186 +20,428 @@ export class DepartmentsService {
   // =========================================================
   // CREATE
   // =========================================================
-
-  async create(schoolId: string, dto: CreateDepartmentDto) {
-    // Verify school
-    const school = await this.prisma.school.findUnique({
+  async create(dto: CreateDepartmentDto) {
+    const existingDepartment = await this.prisma.department.findFirst({
       where: {
-        id: schoolId,
+        OR: [{ name: dto.name }, { code: dto.code }],
+      },
+    });
+
+    if (existingDepartment) {
+      throw new ConflictException('Department name or code already exists');
+    }
+
+    const schools = await this.prisma.school.findMany({
+      where: {
+        id: {
+          in: dto.schoolIds,
+        },
+        isActive: true,
       },
       select: {
         id: true,
       },
     });
 
-    if (!school) {
-      throw new NotFoundException('School not found');
-    }
-
-    // Check duplicate department
-    const existing = await this.prisma.department.findUnique({
-      where: {
-        schoolId_name: {
-          schoolId,
-          name: dto.name,
-        },
-      },
-    });
-
-    if (existing) {
+    if (schools.length !== dto.schoolIds.length) {
       throw new BadRequestException(
-        'Department already exists for this school',
+        'One or more selected schools are invalid or inactive',
       );
     }
 
-    return this.prisma.department.create({
-      data: {
-        schoolId,
-        name: dto.name,
-        code: dto.code,
-        description: dto.description,
-      },
-      select: {
-        id: true,
-        schoolId: true,
-        name: true,
-        code: true,
-        description: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const department = await tx.department.create({
+        data: {
+          name: dto.name,
+          code: dto.code,
+          description: dto.description,
+        },
+      });
+
+      await tx.schoolDepartment.createMany({
+        data: dto.schoolIds.map((schoolId) => ({
+          schoolId,
+          departmentId: department.id,
+        })),
+        skipDuplicates: true,
+      });
+
+      return tx.department.findUnique({
+        where: {
+          id: department.id,
+        },
+        include: {
+          schoolMappings: {
+            include: {
+              school: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      });
     });
   }
 
   // =========================================================
   // GET ALL
   // =========================================================
+  async findAll(
+    schoolId: string,
+    paginationDto: PaginationDto,
+    search?: string,
+    isActive?: boolean,
+  ) {
+    const page = paginationDto.page ?? 1;
+    const limit = paginationDto.limit ?? 10;
 
-  async findAll(schoolId: string) {
-    return this.prisma.department.findMany({
-      where: {
-        schoolId,
-        isActive: true,
+    const where: Prisma.DepartmentWhereInput = {
+      ...(schoolId && {
+        schoolMappings: {
+          some: {
+            schoolId,
+          },
+        },
+      }),
+
+      ...(isActive !== undefined && {
+        isActive,
+      }),
+
+      ...(search?.trim() && {
+        OR: [
+          {
+            name: {
+              contains: search.trim(),
+              mode: 'insensitive',
+            },
+          },
+          {
+            code: {
+              contains: search.trim(),
+              mode: 'insensitive',
+            },
+          },
+        ],
+      }),
+    };
+
+    const [departments, total] = await Promise.all([
+      this.prisma.department.findMany({
+        where,
+        orderBy: {
+          name: 'asc',
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          description: true,
+          isActive: true,
+
+          schoolMappings: {
+            select: {
+              school: {
+                select: {
+                  id: true,
+                  name: true,
+                  code: true,
+                },
+              },
+            },
+          },
+
+          _count: {
+            select: {
+              learners: true,
+            },
+          },
+        },
+      }),
+
+      this.prisma.department.count({
+        where,
+      }),
+    ]);
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      items: departments.map((department) => ({
+        id: department.id,
+        name: department.name,
+        code: department.code,
+        description: department.description,
+        isActive: department.isActive,
+        learnersCount: department._count.learners,
+      })),
+
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
       },
-      orderBy: {
-        name: 'asc',
-      },
-      select: {
-        id: true,
-        schoolId: true,
-        name: true,
-        code: true,
-        description: true,
-        isActive: true,
-      },
-    });
+    };
   }
 
   // =========================================================
   // GET ONE
   // =========================================================
+  async findOne(id: string) {
+    try {
+      const department = await this.prisma.department.findUnique({
+        where: {
+          id,
+        },
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          description: true,
+          isActive: true,
 
-  async findOne(schoolId: string, id: string) {
-    const department = await this.prisma.department.findFirst({
-      where: {
-        id,
-        schoolId,
-      },
-      select: {
-        id: true,
-        schoolId: true,
-        name: true,
-        code: true,
-        description: true,
-        isActive: true,
+          schoolMappings: {
+            select: {
+              school: {
+                select: {
+                  id: true,
+                  name: true,
+                  code: true,
+                },
+              },
+            },
+          },
 
-        _count: {
-          select: {
-            learners: true,
+          learners: {
+            select: {
+              id: true,
+              status: true,
+
+              enrollments: {
+                select: {
+                  id: true,
+                  completedAt: true,
+
+                  course: {
+                    select: {
+                      id: true,
+                      dueDate: true,
+                    },
+                  },
+                },
+              },
+
+              certificates: {
+                select: {
+                  id: true,
+                },
+              },
+            },
           },
         },
-      },
-    });
+      });
 
-    if (!department) {
-      throw new NotFoundException('Department not found');
+      if (!department) {
+        throw new NotFoundException('Department not found');
+      }
+
+      const totalLearners = department.learners.length;
+
+      const activeLearners = department.learners.filter(
+        (learner) => learner.status === 'ACTIVE',
+      ).length;
+
+      const certifiedLearners = department.learners.filter(
+        (learner) => learner.certificates.length > 0,
+      ).length;
+
+      const totalEnrollments = department.learners.reduce(
+        (total, learner) => total + learner.enrollments.length,
+        0,
+      );
+
+      const completedEnrollments = department.learners.reduce(
+        (total, learner) =>
+          total +
+          learner.enrollments.filter(
+            (enrollment) => enrollment.completedAt !== null,
+          ).length,
+        0,
+      );
+
+      const completionPercentage =
+        totalEnrollments > 0
+          ? Math.round((completedEnrollments / totalEnrollments) * 100)
+          : 0;
+
+      const overdueLearners = department.learners.filter((learner) =>
+        learner.enrollments.some(
+          (enrollment) =>
+            enrollment.course.dueDate &&
+            enrollment.course.dueDate < new Date() &&
+            enrollment.completedAt === null,
+        ),
+      ).length;
+
+      return {
+        id: department.id,
+        name: department.name,
+        code: department.code,
+        description: department.description,
+
+        statistics: {
+          totalLearners,
+          activeLearners,
+          completionPercentage,
+          certifiedLearners,
+          overdueLearners,
+        },
+
+        publishingStatus: department.isActive ? 'ACTIVE' : 'INACTIVE',
+
+        schoolsAssigned: department.schoolMappings.map((mapping) => ({
+          id: mapping.school.id,
+          name: mapping.school.name,
+          code: mapping.school.code,
+        })),
+
+        overallCompletion: completionPercentage,
+      };
+    } catch (err) {
+      console.log('Department findOne error:', err);
+
+      if (err instanceof NotFoundException) {
+        throw err;
+      }
+
+      throw new InternalServerErrorException('Failed to get department');
     }
-
-    return department;
   }
 
   // =========================================================
   // UPDATE
   // =========================================================
 
-  async update(schoolId: string, id: string, dto: UpdateDepartmentDto) {
-    const department = await this.prisma.department.findFirst({
-      where: {
-        id,
-        schoolId,
-      },
+  async update(id: string, dto: UpdateDepartmentDto) {
+    const department = await this.prisma.department.findUnique({
+      where: { id },
     });
 
     if (!department) {
       throw new NotFoundException('Department not found');
     }
 
-    // If name is being changed, check duplicate
-    if (dto.name && dto.name !== department.name) {
-      const existing = await this.prisma.department.findUnique({
+    if (dto.name || dto.code) {
+      const existing = await this.prisma.department.findFirst({
         where: {
-          schoolId_name: {
-            schoolId,
-            name: dto.name,
+          OR: [
+            dto.name ? { name: dto.name } : undefined,
+            dto.code ? { code: dto.code } : undefined,
+          ].filter(Boolean) as any,
+          NOT: {
+            id,
           },
         },
       });
 
       if (existing) {
-        throw new BadRequestException(
-          'Department already exists for this school',
-        );
+        throw new ConflictException('Department name or code already exists');
       }
     }
 
-    return this.prisma.department.update({
-      where: {
-        id,
-      },
-      data: {
-        name: dto.name,
-        code: dto.code,
-        description: dto.description,
-      },
-      select: {
-        id: true,
-        schoolId: true,
-        name: true,
-        code: true,
-        description: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const updatedDepartment = await tx.department.update({
+        where: { id },
+        data: {
+          ...(dto.name !== undefined && {
+            name: dto.name,
+          }),
+          ...(dto.code !== undefined && {
+            code: dto.code,
+          }),
+          ...(dto.description !== undefined && {
+            description: dto.description,
+          }),
+        },
+      });
+
+      if (dto.schoolIds !== undefined) {
+        const schools = await tx.school.findMany({
+          where: {
+            id: {
+              in: dto.schoolIds,
+            },
+            isActive: true,
+          },
+          select: {
+            id: true,
+          },
+        });
+
+        if (schools.length !== dto.schoolIds.length) {
+          throw new BadRequestException(
+            'One or more selected schools are invalid or inactive',
+          );
+        }
+
+        await tx.schoolDepartment.deleteMany({
+          where: {
+            departmentId: id,
+          },
+        });
+
+        await tx.schoolDepartment.createMany({
+          data: dto.schoolIds.map((schoolId) => ({
+            schoolId,
+            departmentId: id,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      return tx.department.findUnique({
+        where: {
+          id,
+        },
+        include: {
+          schoolMappings: {
+            include: {
+              school: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      });
     });
   }
-
   // =========================================================
   // DELETE
   // =========================================================
 
-  async remove(schoolId: string, id: string) {
-    const department = await this.prisma.department.findFirst({
+  async remove(id: string) {
+    const department = await this.prisma.department.findUnique({
       where: {
         id,
-        schoolId,
       },
       select: {
         id: true,
+
         _count: {
           select: {
             learners: true,
+            courseAssignments: true,
           },
         },
       },
@@ -207,7 +453,13 @@ export class DepartmentsService {
 
     if (department._count.learners > 0) {
       throw new BadRequestException(
-        'Department cannot be deleted because learners or users are assigned to it',
+        'Department cannot be deleted because learners are assigned to it',
+      );
+    }
+
+    if (department._count.courseAssignments > 0) {
+      throw new BadRequestException(
+        'Department cannot be deleted because it is assigned to courses',
       );
     }
 

@@ -38,32 +38,26 @@ export class CreateLearnerDto {
   password: string;
 
   @ApiProperty({
-    example: 'learner-type-uuid',
-    description: 'Learner type belonging to the selected school',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+    description:
+      'Learner role assigned to this learner. The role must be assigned to the selected school.',
   })
   @IsUUID()
-  learnerTypeId: string;
+  learnerRoleId: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     example: 'EMP001',
   })
-  @ApiProperty({ example: 'EMP001' })
   @IsString()
   @MinLength(3)
   employeeId: string;
 
   @ApiPropertyOptional({
-    example: 'CBSE',
+    example: '550e8400-e29b-41d4-a716-446655440002',
+    description: 'Department assigned to the learner.',
   })
   @IsOptional()
-  @IsString()
-  board?: string;
-
-  @ApiPropertyOptional({
-    example: 'Department Id',
-  })
-  @IsOptional()
-  @IsString()
+  @IsUUID()
   departmentId?: string;
 
   @ApiPropertyOptional({
@@ -73,10 +67,10 @@ export class CreateLearnerDto {
   @IsDateString()
   dateOfJoining?: string;
 
-  @ApiProperty({
-    example: 'school-uuid',
+  @ApiPropertyOptional({
+    example: '550e8400-e29b-41d4-a716-446655440003',
     description:
-      'Required when SUPER_ADMIN creates a learner. ADMIN schoolId comes from JWT.',
+      'School ID. Required when SUPER_ADMIN creates a learner. ADMIN school ID comes from JWT.',
   })
   @IsOptional()
   @IsUUID()

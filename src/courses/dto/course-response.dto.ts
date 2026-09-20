@@ -26,7 +26,7 @@ export class CourseResponseDto {
   title: string;
 
   @ApiPropertyOptional({
-    example: 'Develop leadership capabilities for school administrators.',
+    example: 'Develop leadership capabilities for administrators.',
     nullable: true,
   })
   description: string | null;
@@ -76,10 +76,4 @@ export class CourseResponseDto {
   })
   isMandatory: boolean;
 
-  @ApiPropertyOptional({
-    example: 'CBSE',
-    nullable: true,
-    description: 'Education board applicable to the course.',
-  })
-  board: string | null;
 }

@@ -13,6 +13,7 @@ import {
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -88,9 +89,49 @@ export class LearnersController {
 
   @Get()
   @ApiOperation({
-    summary: 'Get learners',
+    summary: 'Get all learners',
     description:
-      'Retrieves a paginated list of learners based on the authenticated user’s role and school.',
+      'Retrieves a paginated list of learners with optional search, role, school, and status filters.',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    example: 'John',
+    description: 'Search by learner name, employee ID, email, or department.',
+  })
+  @ApiQuery({
+    name: 'roleId',
+    required: false,
+    type: String,
+    example: 'learner-type-uuid',
+    description: 'Filter learners by role / learner type.',
+  })
+  @ApiQuery({
+    name: 'schoolId',
+    required: false,
+    type: String,
+    example: 'school-uuid',
+    description: 'Filter learners by school. Available for Super Admin.',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['PENDING_APPROVAL', 'ACTIVE', 'REJECTED', 'INACTIVE', 'SUSPENDED'],
+    example: 'ACTIVE',
+    description: 'Filter learners by status.',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    example: 10,
   })
   @ApiResponse({
     status: 200,
@@ -100,52 +141,54 @@ export class LearnersController {
         success: true,
         message: 'Learners retrieved successfully',
         data: {
-          data: [
+          items: [
             {
-              id: 'df38a301-6ba6-46f0-a9c8-8878cf40a96c',
-              schoolId: 'b88f340c-538b-425a-bceb-9ac17d853e9d',
-              name: 'John Student',
-              email: 'john.student@school.com',
-              phone: '+919876543210',
-              passwordSet: true,
-              learnerTypeId: '8df7a2f3-805d-4ae2-b58a-4e90f12415d7',
+              id: 'learner-uuid-1',
+              name: 'Anitha Kumar',
               employeeId: 'EMP001',
-              board: 'CBSE',
-              department: 'Computer Science',
-              dateOfJoining: '2026-06-01T00:00:00.000Z',
+              department: 'Science',
+              role: {
+                id: 'role-uuid',
+                name: 'Teacher',
+              },
+              school: {
+                id: 'school-uuid',
+                name: 'SBOA School & Junior College, Chennai',
+                code: 'SBOA001',
+              },
+              progress: 82,
+              completionStatus: 'IN_PROGRESS',
+              assessmentScore: '9/10',
+              assessmentScorePercentage: 91,
               status: 'ACTIVE',
-              rejectionReason: null,
-              rejectedAt: null,
-              rejectedBy: null,
-              approvedAt: '2026-09-13T03:51:49.402Z',
-              approvedBy: 'SUPER_ADMIN',
-              createdAt: '2026-09-13T03:51:49.421Z',
-              updatedAt: '2026-09-13T03:51:49.421Z',
             },
           ],
           meta: {
             page: 1,
             limit: 10,
-            total: 1,
-            totalPages: 1,
+            total: 12,
+            totalPages: 2,
           },
         },
       },
     },
   })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - Invalid or missing access token.',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden - Insufficient permissions.',
-  })
-  async findAll(@Req() req: any, @Query() paginationDto: PaginationDto) {
+  async findAll(
+    @Req() req: any,
+    @Query() pagination: PaginationDto,
+    @Query('search') search?: string,
+    @Query('roleId') roleId?: string,
+    @Query('schoolId') schoolId?: string,
+    @Query('status') status?: string,
+  ) {
     return this.learnersService.findAll(
       req.user.role,
-      req.user.schoolId ?? null,
-      paginationDto,
+      req.user.schoolId,
+      pagination,
+      search,
+      roleId,
+      schoolId,
+      status,
     );
   }
 
@@ -169,9 +212,8 @@ export class LearnersController {
           email: 'john.student@school.com',
           phone: '+919876543210',
           passwordSet: true,
-          learnerTypeId: '8df7a2f3-805d-4ae2-b58a-4e90f12415d7',
+          learnerRoleId: '8df7a2f3-805d-4ae2-b58a-4e90f12415d7',
           employeeId: 'EMP001',
-          board: 'CBSE',
           department: 'Computer Science',
           dateOfJoining: '2026-06-01T00:00:00.000Z',
           status: 'ACTIVE',

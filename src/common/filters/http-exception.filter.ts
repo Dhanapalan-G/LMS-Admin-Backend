@@ -18,6 +18,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let message = 'Internal server error';
     let error = 'Internal Server Error';
 
+    // ---------------------------------------------
+    // TERMINAL LOG
+    // ---------------------------------------------
+
+    console.error('\n==============================================');
+    console.error('              API EXCEPTION');
+    console.error('==============================================');
+    console.error(`Method   : ${request.method}`);
+    console.error(`URL      : ${request.originalUrl}`);
+    console.error(`Status   : ${status}`);
+
     if (exception instanceof HttpException) {
       status = exception.getStatus();
 
@@ -34,14 +45,31 @@ export class HttpExceptionFilter implements ExceptionFilter {
         message = responseBody.message ?? message;
         error = responseBody.error ?? error;
       }
+    } else if (exception instanceof Error) {
+      // ---------------------------------------------
+      // Prisma / unknown errors
+      // ---------------------------------------------
+
+      console.error('Error Name:', exception.name);
+      console.error('Error Message:', exception.message);
+
+      message = 'Internal server error';
+      error = exception.name;
     }
+
+    console.error(`Message  : ${message}`);
+    console.error('\nException:');
+    console.error(exception);
+    console.error('\nStack Trace:');
+    console.error(exception instanceof Error ? exception.stack : exception);
+    console.error('==============================================\n');
 
     response.status(status).json({
       success: false,
       message,
       error,
       statusCode: status,
-      path: request.url,
+      path: request.originalUrl,
       timestamp: new Date().toISOString(),
     });
   }

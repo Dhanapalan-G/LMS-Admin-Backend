@@ -21,17 +21,17 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { ModulesService } from '../modules.service';
-import { CreateModuleDto } from '../dto/create-module.dto';
-import { UpdateModuleDto } from '../dto/update-module.dto';
-import { ModuleListResponseDto } from '../dto/module-list-response.dto';
-import { PaginationDto } from '../../common/dto/pagination.dto';
-import { AuthType } from '../../auth/decorators/auth-type.decorator';
-import { AuthTypeGuard } from '../../auth/guards/auth-type.guard';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { Roles } from '../../auth/decorators/roles.decorator';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { AdminRole } from '../../generated/prisma/client';
+import { ModulesService } from './modules.service';
+import { CreateModuleDto } from './dto/create-module.dto';
+import { UpdateModuleDto } from './dto/update-module.dto';
+import { ModuleListResponseDto } from './dto/module-list-response.dto';
+import { PaginationDto } from '../common/dto/pagination.dto';
+import { AuthType } from '../auth/decorators/auth-type.decorator';
+import { AuthTypeGuard } from '../auth/guards/auth-type.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { AdminRole } from '../generated/prisma/client';
 
 @ApiTags('Admin - Modules')
 @ApiBearerAuth('access-token')
@@ -82,14 +82,11 @@ export class AdminModulesController {
   })
   async create(
     @Param('courseId') courseId: string,
-    @Body() dto: CreateModuleDto,
-    @Req() req: any,
+    @Body() dto: CreateModuleDto
   ) {
     const module = await this.modulesService.create(
       courseId,
-      dto,
-      req.user.schoolId,
-    );
+      dto    );
 
     return {
       message: 'Module created successfully',

@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSchoolDto } from './dto/create-school.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { Prisma } from '../generated/prisma/client';
 
 @Injectable()
 export class SchoolsService {
@@ -26,22 +27,59 @@ export class SchoolsService {
       data: {
         name: dto.name,
         code: dto.code,
+        board: dto.board,
+        isActive: dto.isActive,
       },
       select: {
         id: true,
         name: true,
         code: true,
+        board: true,
+        isActive: true,
       },
     });
   }
 
-  async findAll(paginationDto: PaginationDto) {
+  async findAll(
+    paginationDto: PaginationDto,
+    search?: string,
+    board?: string,
+    isActive?: boolean,
+  ) {
     const page = paginationDto.page ?? 1;
     const limit = paginationDto.limit ?? 10;
 
     const skip = (page - 1) * limit;
 
-    const where = {};
+    const where: Prisma.SchoolWhereInput = {
+      ...(search && {
+        OR: [
+          {
+            name: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+          {
+            code: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+        ],
+      }),
+
+      ...(board && {
+        board: {
+          equals: board,
+          mode: 'insensitive',
+        },
+      }),
+
+      ...(isActive !== undefined && {
+        isActive,
+      }),
+    };
 
     const [schools, total] = await this.prisma.$transaction([
       this.prisma.school.findMany({
@@ -53,6 +91,17 @@ export class SchoolsService {
           id: true,
           name: true,
           code: true,
+          board: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+
+          learners: {
+            select: {
+              id: true,
+              status: true,
+            },
+          },
         },
         skip,
         take: limit,
@@ -63,10 +112,88 @@ export class SchoolsService {
       }),
     ]);
 
+    const schoolIds = schools.map((school) => school.id);
+
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: {
+        learner: {
+          schoolId: {
+            in: schoolIds,
+          },
+        },
+      },
+      select: {
+        completedAt: true,
+        learner: {
+          select: {
+            schoolId: true,
+          },
+        },
+      },
+    });
+
+    const enrollmentStats = new Map<
+      string,
+      {
+        total: number;
+        completed: number;
+      }
+    >();
+
+    for (const enrollment of enrollments) {
+      const schoolId = enrollment.learner.schoolId;
+
+      const stats = enrollmentStats.get(schoolId) ?? {
+        total: 0,
+        completed: 0,
+      };
+
+      stats.total++;
+
+      if (enrollment.completedAt) {
+        stats.completed++;
+      }
+
+      enrollmentStats.set(schoolId, stats);
+    }
+
+    const items = schools.map((school) => {
+      const learnerCount = school.learners.length;
+
+      const activeLearnerCount = school.learners.filter(
+        (learner) => learner.status === 'ACTIVE',
+      ).length;
+
+      const stats = enrollmentStats.get(school.id) ?? {
+        total: 0,
+        completed: 0,
+      };
+
+      const completionPercentage =
+        stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
+
+      return {
+        id: school.id,
+        name: school.name,
+        code: school.code,
+        board: school.board,
+
+        learnerCount,
+        activeLearnerCount,
+
+        completionPercentage,
+
+        status: school.isActive ? 'ACTIVE' : 'INACTIVE',
+
+        createdAt: school.createdAt,
+        updatedAt: school.updatedAt,
+      };
+    });
+
     const totalPages = Math.ceil(total / limit);
 
     return {
-      items: schools,
+      items,
       meta: {
         page,
         limit,
@@ -87,10 +214,92 @@ export class SchoolsService {
         id: true,
         name: true,
         code: true,
-        _count: {
+        board: true,
+        isActive: true,
+
+        // ------------------------------------------
+        // Learners
+        // ------------------------------------------
+        learners: {
           select: {
-            users: true,
-            courses: true,
+            id: true,
+            status: true,
+
+            learnerRole: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+              },
+            },
+
+            department: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+              },
+            },
+
+            enrollments: {
+              select: {
+                id: true,
+                completedAt: true,
+
+                course: {
+                  select: {
+                    id: true,
+                    dueDate: true,
+                  },
+                },
+              },
+            },
+
+            certificates: {
+              select: {
+                id: true,
+              },
+            },
+          },
+        },
+
+        // ------------------------------------------
+        // Departments assigned to school
+        // ------------------------------------------
+        departments: {
+          where: {
+            department: {
+              isActive: true,
+            },
+          },
+          select: {
+            department: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+              },
+            },
+          },
+        },
+
+        // ------------------------------------------
+        // Learner roles assigned to school
+        // ------------------------------------------
+        learnerRoles: {
+          where: {
+            learnerRole: {
+              isActive: true,
+            },
+          },
+          select: {
+            learnerRole: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+              },
+            },
           },
         },
       },
@@ -100,6 +309,89 @@ export class SchoolsService {
       throw new NotFoundException('School not found');
     }
 
-    return school;
+    // ------------------------------------------
+    // Statistics
+    // ------------------------------------------
+
+    const totalLearners = school.learners.length;
+
+    const activeLearners = school.learners.filter(
+      (learner) => learner.status === 'ACTIVE',
+    ).length;
+
+    const certifiedLearners = school.learners.filter(
+      (learner) => learner.certificates.length > 0,
+    ).length;
+
+    const totalEnrollments = school.learners.reduce(
+      (total, learner) => total + learner.enrollments.length,
+      0,
+    );
+
+    const completedEnrollments = school.learners.reduce(
+      (total, learner) =>
+        total +
+        learner.enrollments.filter(
+          (enrollment) => enrollment.completedAt !== null,
+        ).length,
+      0,
+    );
+
+    const completionPercentage =
+      totalEnrollments > 0
+        ? Math.round((completedEnrollments / totalEnrollments) * 100)
+        : 0;
+
+    const overdueLearners = school.learners.filter((learner) =>
+      learner.enrollments.some(
+        (enrollment) =>
+          enrollment.course.dueDate &&
+          enrollment.course.dueDate < new Date() &&
+          enrollment.completedAt === null,
+      ),
+    ).length;
+
+    // ------------------------------------------
+    // Assigned learner roles
+    // ------------------------------------------
+
+    const assignedRoles = school.learnerRoles.map(
+      (mapping) => mapping.learnerRole,
+    );
+
+    // ------------------------------------------
+    // Assigned departments
+    // ------------------------------------------
+
+    const assignedDepartments = school.departments.map(
+      (mapping) => mapping.department,
+    );
+
+    // ------------------------------------------
+    // Response
+    // ------------------------------------------
+
+    return {
+      id: school.id,
+      name: school.name,
+      code: school.code,
+      board: school.board,
+
+      statistics: {
+        totalLearners,
+        activeLearners,
+        completionPercentage,
+        certifiedLearners,
+        overdueLearners,
+      },
+
+      publishingStatus: school.isActive ? 'ACTIVE' : 'INACTIVE',
+
+      assignedRoles,
+
+      assignedDepartments,
+
+      overallCompletion: completionPercentage,
+    };
   }
 }

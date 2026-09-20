@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -15,6 +16,7 @@ import {
   ApiBody,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -32,6 +34,7 @@ import { AuthType } from '../auth/decorators/auth-type.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 
 import { AdminRole } from '../generated/prisma/enums';
+import { PaginationDto } from '../common/dto/pagination.dto';
 
 @ApiTags('Admin - Departments')
 @ApiBearerAuth('access-token')
@@ -90,8 +93,8 @@ export class DepartmentsController {
     status: 404,
     description: 'School not found.',
   })
-  async create(@Req() req: any, @Body() dto: CreateDepartmentDto) {
-    return this.departmentsService.create(req.user.schoolId, dto);
+  async create(@Body() dto: CreateDepartmentDto) {
+    return this.departmentsService.create(dto);
   }
 
   // =======================================================
@@ -102,42 +105,54 @@ export class DepartmentsController {
   @ApiOperation({
     summary: 'Get all departments',
     description:
-      'Retrieves all departments belonging to the authenticated admin school.',
+      'Retrieves paginated departments with optional school, search, and status filters.',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Departments retrieved successfully.',
-    schema: {
-      example: {
-        success: true,
-        message: 'Departments retrieved successfully',
-        data: [
-          {
-            id: 'department-uuid-1',
-            schoolId: 'school-uuid',
-            name: 'Mathematics',
-            code: 'MATH',
-            description: 'Mathematics department',
-            isActive: true,
-            createdAt: '2026-09-15T10:00:00.000Z',
-            updatedAt: '2026-09-15T10:00:00.000Z',
-          },
-          {
-            id: 'department-uuid-2',
-            schoolId: 'school-uuid',
-            name: 'Science',
-            code: 'SCI',
-            description: 'Science department',
-            isActive: true,
-            createdAt: '2026-09-15T10:00:00.000Z',
-            updatedAt: '2026-09-15T10:00:00.000Z',
-          },
-        ],
-      },
-    },
+  @ApiQuery({
+    name: 'schoolId',
+    required: false,
+    type: String,
+    example: 'school-uuid',
+    description: 'Filter departments by school ID.',
   })
-  async findAll(@Req() req: any) {
-    return this.departmentsService.findAll(req.user.schoolId);
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    example: 'math',
+    description: 'Search departments by name or code.',
+  })
+  @ApiQuery({
+    name: 'isActive',
+    required: false,
+    type: String,
+    example: 'true',
+    description: 'Filter departments by active status.',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    example: 10,
+  })
+  async findAll(
+    @Req() req: any,
+    @Query() paginationDto: PaginationDto,
+    @Query('schoolId') schoolId?: string,
+    @Query('search') search?: string,
+    @Query('isActive') isActive?: string,
+  ) {
+    return this.departmentsService.findAll(
+      schoolId ?? req.user.schoolId,
+      paginationDto,
+      search,
+      isActive !== undefined ? isActive === 'true' : undefined,
+    );
   }
 
   // =======================================================
@@ -148,12 +163,13 @@ export class DepartmentsController {
   @ApiOperation({
     summary: 'Get department by ID',
     description:
-      'Retrieves a department belonging to the authenticated admin school.',
+      'Returns department details including learner statistics, completion, certification, overdue learners, publishing status, and assigned school.',
   })
   @ApiParam({
     name: 'id',
-    description: 'Department ID',
-    example: '550e8400-e29b-41d4-a716-446655440000',
+    type: String,
+    example: 'department-uuid',
+    description: 'Unique department ID',
   })
   @ApiResponse({
     status: 200,
@@ -161,29 +177,56 @@ export class DepartmentsController {
     schema: {
       example: {
         success: true,
-        message: 'Department retrieved successfully',
+        message: 'Request successful',
         data: {
           id: 'department-uuid',
-          schoolId: 'school-uuid',
-          name: 'Mathematics',
-          code: 'MATH',
+          name: 'Maths',
+          code: 'DEPT001',
           description: 'Mathematics department',
-          isActive: true,
-          createdAt: '2026-09-15T10:00:00.000Z',
-          updatedAt: '2026-09-15T10:00:00.000Z',
-          _count: {
-            users: 25,
+
+          statistics: {
+            totalLearners: 50,
+            activeLearners: 40,
+            completionPercentage: 72,
+            certifiedLearners: 18,
+            overdueLearners: 4,
           },
+
+          publishingStatus: 'ACTIVE',
+
+          schoolsAssigned: [
+            {
+              id: 'school-uuid',
+              name: 'SBOA School & Junior College, Chennai',
+              code: 'SBOA001',
+            },
+          ],
+
+          overallCompletion: 72,
         },
       },
     },
   })
   @ApiResponse({
+    status: 401,
+    description: 'Unauthorized. Access token is missing or invalid.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden. User does not have permission.',
+  })
+  @ApiResponse({
     status: 404,
     description: 'Department not found.',
+    schema: {
+      example: {
+        success: false,
+        message: 'Department not found',
+      },
+    },
   })
-  async findOne(@Req() req: any, @Param('id') id: string) {
-    return this.departmentsService.findOne(req.user.schoolId, id);
+  async findOne(@Param('id') id: string) {
+    return this.departmentsService.findOne(id);
   }
 
   // =======================================================
@@ -232,12 +275,8 @@ export class DepartmentsController {
     status: 404,
     description: 'Department not found.',
   })
-  async update(
-    @Req() req: any,
-    @Param('id') id: string,
-    @Body() dto: UpdateDepartmentDto,
-  ) {
-    return this.departmentsService.update(req.user.schoolId, id, dto);
+  async update(@Param('id') id: string, @Body() dto: UpdateDepartmentDto) {
+    return this.departmentsService.update(id, dto);
   }
 
   // =======================================================
@@ -277,7 +316,7 @@ export class DepartmentsController {
     status: 404,
     description: 'Department not found.',
   })
-  async remove(@Req() req: any, @Param('id') id: string) {
-    return this.departmentsService.remove(req.user.schoolId, id);
+  async remove(@Param('id') id: string) {
+    return this.departmentsService.remove(id);
   }
 }
