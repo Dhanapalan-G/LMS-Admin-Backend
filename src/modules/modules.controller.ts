@@ -38,7 +38,7 @@ import { AdminRole } from '../generated/prisma/client';
 @UseGuards(JwtAuthGuard, AuthTypeGuard, RolesGuard)
 @AuthType('ADMIN')
 @Roles(AdminRole.SUPER_ADMIN, AdminRole.ADMIN)
-@Controller('admin/modules')
+@Controller('admin')
 export class AdminModulesController {
   constructor(private readonly modulesService: ModulesService) {}
 
@@ -48,7 +48,7 @@ export class AdminModulesController {
   @ApiOperation({
     summary: 'Create a module inside a course',
     description:
-      'Creates a new module inside a course belonging to the authenticated user school.',
+      'Creates a new module inside a course.',
   })
   @ApiParam({
     name: 'courseId',
@@ -82,11 +82,9 @@ export class AdminModulesController {
   })
   async create(
     @Param('courseId') courseId: string,
-    @Body() dto: CreateModuleDto
+    @Body() dto: CreateModuleDto,
   ) {
-    const module = await this.modulesService.create(
-      courseId,
-      dto    );
+    const module = await this.modulesService.create(courseId, dto);
 
     return {
       message: 'Module created successfully',
@@ -144,11 +142,7 @@ export class AdminModulesController {
     @Req() req: any,
     @Query() paginationDto: PaginationDto,
   ) {
-    const modules = await this.modulesService.findAll(
-      courseId,
-      req.user.schoolId,
-      paginationDto,
-    );
+    const modules = await this.modulesService.findAll(courseId, paginationDto);
     return {
       message: 'Modules retrieved successfully',
       data: modules,
@@ -161,7 +155,7 @@ export class AdminModulesController {
   @ApiOperation({
     summary: 'Update a module',
     description:
-      'Updates an existing module belonging to the authenticated user school.',
+      'Updates an existing module.',
   })
   @ApiParam({
     name: 'id',
@@ -193,12 +187,8 @@ export class AdminModulesController {
     status: 404,
     description: 'Module not found',
   })
-  async update(
-    @Param('id') id: string,
-    @Body() dto: UpdateModuleDto,
-    @Req() req: any,
-  ) {
-    const module = await this.modulesService.update(id, dto, req.user.schoolId);
+  async update(@Param('id') id: string, @Body() dto: UpdateModuleDto) {
+    const module = await this.modulesService.update(id, dto);
 
     return {
       message: 'Module updated successfully',
@@ -212,7 +202,7 @@ export class AdminModulesController {
   @ApiOperation({
     summary: 'Delete a module',
     description:
-      'Deletes a module belonging to the authenticated administrator school.',
+      'Deletes a module.',
   })
   @ApiParam({
     name: 'id',
@@ -236,8 +226,8 @@ export class AdminModulesController {
     status: 404,
     description: 'Module not found',
   })
-  async remove(@Param('id') id: string, @Req() req: any) {
-    const result = await this.modulesService.remove(id, req.user.schoolId);
+  async remove(@Param('id') id: string) {
+    const result = await this.modulesService.remove(id);
 
     return {
       message: 'Module deleted successfully',

@@ -39,15 +39,10 @@ export class ModulesService {
     });
   }
 
-  async findAll(
-    courseId: string,
-    schoolId: string,
-    paginationDto: PaginationDto,
-  ) {
+  async findAll(courseId: string, paginationDto: PaginationDto) {
     const course = await this.prisma.course.findFirst({
       where: {
         id: courseId,
-        schoolId,
       },
       select: {
         id: true,
@@ -104,13 +99,10 @@ export class ModulesService {
     };
   }
 
-  async update(id: string, dto: UpdateModuleDto, schoolId: string) {
+  async update(id: string, dto: UpdateModuleDto) {
     const module = await this.prisma.courseModule.findFirst({
       where: {
         id,
-        course: {
-          schoolId,
-        },
       },
     });
 
@@ -135,13 +127,10 @@ export class ModulesService {
     });
   }
 
-  async remove(id: string, schoolId: string) {
+  async remove(id: string) {
     const module = await this.prisma.courseModule.findFirst({
       where: {
         id,
-        course: {
-          schoolId,
-        },
       },
     });
 

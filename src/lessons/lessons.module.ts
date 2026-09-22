@@ -1,8 +1,7 @@
 import { Module } from '@nestjs/common';
-
-import { LessonsController } from './lessons.controller';
 import { LessonsService } from './lessons.service';
 import { AuthModule } from '../auth/auth.module';
+import { LessonsController } from './lessons.controller';
 
 @Module({
   imports: [AuthModule],

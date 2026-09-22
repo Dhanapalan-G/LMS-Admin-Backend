@@ -17,6 +17,7 @@ import { AdminModule } from './admin/admin.module';
 import { CourseAssignmentsModule } from './course-assignment/course-assignment.module';
 import { LearnerRolesModule } from './learner-roles/learner-role.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     QuizzesModule,
     CourseAssignmentsModule,
     DashboardModule,
+    ReportsModule,
   ],
 })
 export class AppModule {}

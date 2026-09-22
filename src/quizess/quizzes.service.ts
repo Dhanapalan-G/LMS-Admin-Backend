@@ -29,27 +29,18 @@ export class QuizzesService {
   // LESSON QUIZ
   // =========================================================
 
-  async createForLesson(
-    courseId: string,
-    moduleId: string,
-    lessonId: string,
-    dto: CreateQuizDto,
-  ) {
+  async createForLesson(lessonId: string, dto: CreateQuizDto) {
     // -------------------------------------------------------
-    // 1. Verify lesson belongs to module and course
+    // 1. Verify lesson exists
     // -------------------------------------------------------
 
-    const lesson = await this.prisma.lesson.findFirst({
+    const lesson = await this.prisma.lesson.findUnique({
       where: {
         id: lessonId,
-        moduleId,
-        module: {
-          id: moduleId,
-          courseId,
-        },
       },
       select: {
         id: true,
+
         quiz: {
           select: {
             id: true,
@@ -431,93 +422,7 @@ export class QuizzesService {
     }
   }
 
-  async updateForLesson(
-    courseId: string,
-    moduleId: string,
-    lessonId: string,
-    dto: UpdateQuizDto,
-  ) {
-    // -------------------------------------------------------
-    // 1. Verify lesson belongs to module and course
-    // -------------------------------------------------------
-
-    const lesson = await this.prisma.lesson.findFirst({
-      where: {
-        id: lessonId,
-        moduleId,
-        module: {
-          id: moduleId,
-          courseId,
-        },
-      },
-      select: {
-        id: true,
-        quiz: {
-          select: {
-            id: true,
-          },
-        },
-      },
-    });
-
-    if (!lesson) {
-      throw new NotFoundException('Lesson not found');
-    }
-
-    // -------------------------------------------------------
-    // 2. Verify quiz exists
-    // -------------------------------------------------------
-
-    if (!lesson.quiz) {
-      throw new NotFoundException('Quiz not found for this lesson');
-    }
-
-    // -------------------------------------------------------
-    // 3. Common update
-    // -------------------------------------------------------
-
-    return this.updateQuiz(lesson.quiz.id, dto);
-  }
-
-  async updateForCourse(courseId: string, dto: UpdateQuizDto) {
-    // -------------------------------------------------------
-    // 1. Verify course and quiz
-    // -------------------------------------------------------
-
-    const course = await this.prisma.course.findUnique({
-      where: {
-        id: courseId,
-      },
-      select: {
-        id: true,
-        quiz: {
-          select: {
-            id: true,
-          },
-        },
-      },
-    });
-
-    if (!course) {
-      throw new NotFoundException('Course not found');
-    }
-
-    // -------------------------------------------------------
-    // 2. Verify quiz exists
-    // -------------------------------------------------------
-
-    if (!course.quiz) {
-      throw new NotFoundException('Quiz not found for this course');
-    }
-
-    // -------------------------------------------------------
-    // 3. Common update
-    // -------------------------------------------------------
-
-    return this.updateQuiz(course.quiz.id, dto);
-  }
-
-  private async updateQuiz(quizId: string, dto: UpdateQuizDto) {
+  async updateQuiz(quizId: string, dto: UpdateQuizDto) {
     // -------------------------------------------------------
     // 1. Validate questions if supplied
     // -------------------------------------------------------
@@ -598,64 +503,7 @@ export class QuizzesService {
     });
   }
 
-  async deleteForLesson(courseId: string, moduleId: string, lessonId: string) {
-    const lesson = await this.prisma.lesson.findFirst({
-      where: {
-        id: lessonId,
-        moduleId,
-        module: {
-          id: moduleId,
-          courseId,
-        },
-      },
-      select: {
-        id: true,
-        quiz: {
-          select: {
-            id: true,
-          },
-        },
-      },
-    });
-
-    if (!lesson) {
-      throw new NotFoundException('Lesson not found');
-    }
-
-    if (!lesson.quiz) {
-      throw new NotFoundException('Quiz not found for this lesson');
-    }
-
-    return this.deleteQuiz(lesson.quiz.id);
-  }
-
-  async deleteForCourse(courseId: string) {
-    const course = await this.prisma.course.findUnique({
-      where: {
-        id: courseId,
-      },
-      select: {
-        id: true,
-        quiz: {
-          select: {
-            id: true,
-          },
-        },
-      },
-    });
-
-    if (!course) {
-      throw new NotFoundException('Course not found');
-    }
-
-    if (!course.quiz) {
-      throw new NotFoundException('Quiz not found for this course');
-    }
-
-    return this.deleteQuiz(course.quiz.id);
-  }
-
-  private async deleteQuiz(quizId: string) {
+  async deleteQuiz(quizId: string) {
     await this.prisma.quiz.update({
       where: {
         id: quizId,

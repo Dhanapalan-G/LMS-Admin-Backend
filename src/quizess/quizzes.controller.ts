@@ -35,25 +35,15 @@ import { UpdateQuizDto } from './dto/update-quiz.dto';
 @UseGuards(JwtAuthGuard, AuthTypeGuard, RolesGuard)
 @AuthType('ADMIN')
 @Roles(AdminRole.SUPER_ADMIN, AdminRole.ADMIN)
-@Controller('admin/courses/:courseId')
+@Controller('admin')
 export class QuizzesController {
   constructor(private readonly quizzesService: QuizzesService) {}
 
-  @Post('modules/:moduleId/lessons/:lessonId/quiz')
+  @Post('lessons/:lessonId/quiz')
   @ApiOperation({
     summary: 'Create lesson quiz',
     description:
       'Creates a quiz for a lesson along with all questions, answer options, and Match-the-Following pairs in a single database transaction.',
-  })
-  @ApiParam({
-    name: 'courseId',
-    description: 'Course ID',
-    example: '550e8400-e29b-41d4-a716-446655440000',
-  })
-  @ApiParam({
-    name: 'moduleId',
-    description: 'Module ID',
-    example: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
   })
   @ApiParam({
     name: 'lessonId',
@@ -214,20 +204,13 @@ export class QuizzesController {
     description: 'Course, module, or lesson not found.',
   })
   async createLessonQuiz(
-    @Param('courseId') courseId: string,
-    @Param('moduleId') moduleId: string,
     @Param('lessonId') lessonId: string,
     @Body() dto: CreateQuizDto,
   ) {
-    return this.quizzesService.createForLesson(
-      courseId,
-      moduleId,
-      lessonId,
-      dto,
-    );
+    return this.quizzesService.createForLesson(lessonId, dto);
   }
 
-  @Post('quiz')
+  @Post('courses/:courseId/quiz')
   @ApiOperation({
     summary: 'Create course quiz',
     description:
@@ -401,103 +384,41 @@ export class QuizzesController {
     return this.quizzesService.createForCourse(courseId, dto);
   }
 
-  @Patch('modules/:moduleId/lessons/:lessonId/quiz')
+  @Patch('quiz/:quizId')
   @ApiOperation({
-    summary: 'Update lesson quiz',
-    description: 'Updates the quiz details associated with a lesson.',
-  })
-  @ApiParam({
-    name: 'courseId',
-    description: 'Course ID',
-    example: '550e8400-e29b-41d4-a716-446655440000',
-  })
-  @ApiParam({
-    name: 'moduleId',
-    description: 'Module ID',
-    example: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
-  })
-  @ApiParam({
-    name: 'lessonId',
-    description: 'Lesson ID',
-    example: '7ba7b810-9dad-11d1-80b4-00c04fd430c8',
+    summary: 'Update quiz',
+    description: 'Updates the quiz details.',
   })
   @ApiBody({
     type: UpdateQuizDto,
   })
   @ApiResponse({
     status: 200,
-    description: 'Lesson quiz updated successfully.',
+    description: 'Quiz updated successfully.',
   })
   @ApiResponse({
     status: 404,
-    description: 'Lesson or quiz not found.',
-  })
-  async updateLessonQuiz(
-    @Param('courseId') courseId: string,
-    @Param('moduleId') moduleId: string,
-    @Param('lessonId') lessonId: string,
-    @Body() dto: UpdateQuizDto,
-  ) {
-    return this.quizzesService.updateForLesson(
-      courseId,
-      moduleId,
-      lessonId,
-      dto,
-    );
-  }
-
-  @Patch(':courseId/quiz')
-  @ApiOperation({
-    summary: 'Update course quiz',
-    description: 'Updates the quiz details associated with a course.',
-  })
-  @ApiParam({
-    name: 'courseId',
-    description: 'Course ID',
-    example: '550e8400-e29b-41d4-a716-446655440000',
-  })
-  @ApiBody({
-    type: UpdateQuizDto,
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Course quiz updated successfully.',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Course or quiz not found.',
+    description: 'Quiz not found.',
   })
   async updateCourseQuiz(
-    @Param('courseId') courseId: string,
+    @Param('quizIdId') quizId: string,
     @Body() dto: UpdateQuizDto,
   ) {
-    return this.quizzesService.updateForCourse(courseId, dto);
+    return this.quizzesService.updateQuiz(quizId, dto);
   }
 
-  @Delete('modules/:moduleId/lessons/:lessonId/quiz')
+  @Delete('quiz/:quizId')
   @ApiOperation({
-    summary: 'Delete lesson quiz',
-    description: 'Archives the quiz associated with a lesson.',
-  })
-  @ApiParam({
-    name: 'courseId',
-    description: 'Course ID',
-  })
-  @ApiParam({
-    name: 'moduleId',
-    description: 'Module ID',
-  })
-  @ApiParam({
-    name: 'lessonId',
-    description: 'Lesson ID',
+    summary: 'Delete quiz',
+    description: 'Archives the Quiz.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Lesson quiz archived successfully.',
+    description: 'Quiz archived successfully.',
     schema: {
       example: {
         success: true,
-        message: 'Lesson quiz archived successfully',
+        message: 'Quiz archived successfully',
         data: {
           message: 'Quiz archived successfully',
         },
@@ -506,44 +427,9 @@ export class QuizzesController {
   })
   @ApiResponse({
     status: 404,
-    description: 'Lesson or quiz not found.',
+    description: 'Quiz not found.',
   })
-  async deleteLessonQuiz(
-    @Param('courseId') courseId: string,
-    @Param('moduleId') moduleId: string,
-    @Param('lessonId') lessonId: string,
-  ) {
-    return this.quizzesService.deleteForLesson(courseId, moduleId, lessonId);
-  }
-
-  @Delete('quiz')
-  @ApiOperation({
-    summary: 'Delete course quiz',
-    description: 'Archives the quiz associated with a course.',
-  })
-  @ApiParam({
-    name: 'courseId',
-    description: 'Course ID',
-    example: '550e8400-e29b-41d4-a716-446655440000',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Course quiz archived successfully.',
-    schema: {
-      example: {
-        success: true,
-        message: 'Course quiz archived successfully',
-        data: {
-          message: 'Quiz archived successfully',
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Course or quiz not found.',
-  })
-  async deleteCourseQuiz(@Param('courseId') courseId: string) {
-    return this.quizzesService.deleteForCourse(courseId);
+  async deleteLessonQuiz(@Param('quizId') quizId: string) {
+    return this.quizzesService.deleteQuiz(quizId);
   }
 }

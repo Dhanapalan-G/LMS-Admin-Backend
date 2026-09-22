@@ -136,7 +136,7 @@ export class AdminCoursesController {
               code: 'COURSE001',
               title: 'Effective Leadership in Education',
               description:
-                'Develop leadership capabilities for school administrators.',
+                'Develop leadership capabilities.',
               status: 'PUBLISHED',
               durationMinutes: 180,
               thumbnail: 'https://cdn.example.com/course-thumbnail.jpg',
@@ -217,7 +217,7 @@ export class AdminCoursesController {
           code: 'COURSE001',
           title: 'Effective Leadership in Education',
           description:
-            'Develop leadership capabilities for school administrators.',
+            'Develop leadership capabilities.',
           status: 'PUBLISHED',
           durationMinutes: 180,
           thumbnail: 'https://cdn.example.com/course-thumbnail.jpg',
