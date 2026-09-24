@@ -141,14 +141,13 @@ export class DepartmentsController {
     example: 10,
   })
   async findAll(
-    @Req() req: any,
     @Query() paginationDto: PaginationDto,
     @Query('schoolId') schoolId?: string,
     @Query('search') search?: string,
     @Query('isActive') isActive?: string,
   ) {
     return this.departmentsService.findAll(
-      schoolId ?? req.user.schoolId,
+      schoolId,
       paginationDto,
       search,
       isActive !== undefined ? isActive === 'true' : undefined,

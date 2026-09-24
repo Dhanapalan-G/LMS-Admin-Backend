@@ -90,7 +90,7 @@ export class DepartmentsService {
   // GET ALL
   // =========================================================
   async findAll(
-    schoolId: string,
+    schoolId: string | undefined,
     paginationDto: PaginationDto,
     search?: string,
     isActive?: boolean,
@@ -170,7 +170,6 @@ export class DepartmentsService {
       }),
     ]);
     const totalPages = Math.ceil(total / limit);
-
     return {
       items: departments.map((department) => ({
         id: department.id,

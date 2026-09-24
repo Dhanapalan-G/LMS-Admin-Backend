@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateSchoolDto } from './dto/create-school.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { Prisma } from '../generated/prisma/client';
+import { UpdateSchoolDto } from './dto/update-school.dto';
 
 @Injectable()
 export class SchoolsService {
@@ -393,5 +394,85 @@ export class SchoolsService {
 
       overallCompletion: completionPercentage,
     };
+  }
+
+  async update(id: string, dto: UpdateSchoolDto) {
+    const existingSchool = await this.prisma.school.findUnique({
+      where: {
+        id,
+      },
+    });
+
+    if (!existingSchool) {
+      throw new NotFoundException('School not found');
+    }
+
+    // Check duplicate code only when code is being changed
+    if (dto.code && dto.code !== existingSchool.code) {
+      const schoolWithSameCode = await this.prisma.school.findUnique({
+        where: {
+          code: dto.code,
+        },
+      });
+
+      if (schoolWithSameCode) {
+        throw new ConflictException('School code already exists');
+      }
+    }
+
+    return this.prisma.school.update({
+      where: {
+        id,
+      },
+      data: {
+        ...(dto.name !== undefined && {
+          name: dto.name,
+        }),
+
+        ...(dto.code !== undefined && {
+          code: dto.code,
+        }),
+
+        ...(dto.board !== undefined && {
+          board: dto.board,
+        }),
+
+        ...(dto.isActive !== undefined && {
+          isActive: dto.isActive,
+        }),
+      },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        board: true,
+        isActive: true,
+      },
+    });
+  }
+
+  async remove(id: string) {
+    const existingSchool = await this.prisma.school.findUnique({
+      where: {
+        id,
+      },
+    });
+
+    if (!existingSchool) {
+      throw new NotFoundException('School not found');
+    }
+
+    return this.prisma.school.delete({
+      where: {
+        id,
+      },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        board: true,
+        isActive: true,
+      },
+    });
   }
 }

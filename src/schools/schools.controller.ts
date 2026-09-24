@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -25,6 +27,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AuthType } from '../auth/decorators/auth-type.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { UpdateSchoolDto } from './dto/update-school.dto';
 
 @ApiTags('Admin - Schools')
 @ApiBearerAuth('access-token')
@@ -83,7 +86,74 @@ export class SchoolsController {
   async create(@Body() dto: CreateSchoolDto) {
     return this.schoolsService.create(dto);
   }
-
+  @Patch(':id')
+  @ApiOperation({
+    summary: 'Update a school',
+    description: 'Updates an existing school by ID.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'School ID',
+    example: 'school-id',
+  })
+  @ApiBody({
+    type: UpdateSchoolDto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'School updated successfully.',
+    schema: {
+      example: {
+        success: true,
+        message: 'Request successful',
+        data: {
+          id: 'school-id',
+          name: 'St. Xavier School',
+          code: 'SXS001',
+          board: 'CBSE',
+          address: 'Nagercoil',
+          phone: '9876543210',
+          email: 'school@example.com',
+          isActive: true,
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request data.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized. Access token is missing or invalid.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden. User does not have permission.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'School not found.',
+    schema: {
+      example: {
+        success: false,
+        message: 'School not found',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'School code already exists.',
+    schema: {
+      example: {
+        success: false,
+        message: 'School code already exists',
+      },
+    },
+  })
+  async update(@Param('id') id: string, @Body() dto: UpdateSchoolDto) {
+    return this.schoolsService.update(id, dto);
+  }
   @Get()
   @ApiOperation({
     summary: 'Get all schools',
@@ -228,5 +298,62 @@ export class SchoolsController {
   })
   async findById(@Param('id') id: string) {
     return this.schoolsService.findById(id);
+  }
+
+  @Delete(':id')
+  @ApiOperation({
+    summary: 'Delete a school',
+    description: 'Deletes an existing school by ID.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'School ID',
+    example: 'school-id',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'School deleted successfully.',
+    schema: {
+      example: {
+        success: true,
+        message: 'Request successful',
+        data: {
+          id: 'school-id',
+          name: 'St. Xavier School',
+          code: 'SXS001',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized. Access token is missing or invalid.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden. User does not have permission.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'School not found.',
+    schema: {
+      example: {
+        success: false,
+        message: 'School not found',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'School cannot be deleted because it is being used.',
+    schema: {
+      example: {
+        success: false,
+        message: 'School cannot be deleted because it is being used',
+      },
+    },
+  })
+  async remove(@Param('id') id: string) {
+    return this.schoolsService.remove(id);
   }
 }
