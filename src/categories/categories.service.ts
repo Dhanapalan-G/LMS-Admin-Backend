@@ -89,12 +89,17 @@ export class CategoriesService {
       // ------------------------------------------
       // 5. Return created category
       // ------------------------------------------
-      return tx.category.findUnique({
+      const data = await tx.category.findUnique({
         where: {
           id: category.id,
         },
         select: this.categorySelect,
       });
+
+      return {
+        message: 'Category created successfully',
+        data,
+      };
     });
   }
 
@@ -256,6 +261,7 @@ export class CategoriesService {
     const totalPages = Math.ceil(total / limit);
 
     return {
+      message: 'Categories retrived successfully',
       items,
       meta: {
         page,
@@ -468,30 +474,33 @@ export class CategoriesService {
     // FINAL RESPONSE
     // ============================================================
     return {
-      id: category.id,
-      name: category.name,
-      description: category.description,
-      status: category.status,
+      message: 'Category retrieved successfully',
+      data: {
+        id: category.id,
+        name: category.name,
+        description: category.description,
+        status: category.status,
 
-      summary: {
-        learners: learnerCount,
-        courses: courseCount,
-        modules: moduleCount,
-        lessons: lessonCount,
+        summary: {
+          learners: learnerCount,
+          courses: courseCount,
+          modules: moduleCount,
+          lessons: lessonCount,
+        },
+
+        targetRoles: Array.from(roleMap.values()),
+
+        departments: Array.from(departmentMap.values()),
+
+        courses: courses.map((course) => ({
+          id: course.id,
+          title: course.title,
+          code: course.code,
+        })),
+
+        createdAt: category.createdAt,
+        updatedAt: category.updatedAt,
       },
-
-      targetRoles: Array.from(roleMap.values()),
-
-      departments: Array.from(departmentMap.values()),
-
-      courses: courses.map((course) => ({
-        id: course.id,
-        title: course.title,
-        code: course.code,
-      })),
-
-      createdAt: category.createdAt,
-      updatedAt: category.updatedAt,
     };
   }
 
@@ -591,19 +600,24 @@ export class CategoriesService {
       // ------------------------------------------
       // 6. Return updated category
       // ------------------------------------------
-      return tx.category.findUnique({
+      const data = await tx.category.findUnique({
         where: {
           id,
         },
         select: this.categorySelect,
       });
+
+      return {
+        message: 'Category updated successfully',
+        data,
+      };
     });
   }
 
   async remove(id: string) {
     await this.findOne(id);
 
-    return this.prisma.category.update({
+    const data = await this.prisma.category.update({
       where: {
         id,
       },
@@ -612,5 +626,10 @@ export class CategoriesService {
       },
       select: this.categorySelect,
     });
+
+    return {
+      message: 'Category removed successfully',
+      data,
+    };
   }
 }

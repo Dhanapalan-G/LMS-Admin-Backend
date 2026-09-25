@@ -66,7 +66,7 @@ export class DepartmentsService {
         skipDuplicates: true,
       });
 
-      return tx.department.findUnique({
+      const data = await tx.department.findUnique({
         where: {
           id: department.id,
         },
@@ -83,6 +83,10 @@ export class DepartmentsService {
           },
         },
       });
+      return {
+        message: 'Department created successfully',
+        data,
+      };
     });
   }
 
@@ -171,6 +175,7 @@ export class DepartmentsService {
     ]);
     const totalPages = Math.ceil(total / limit);
     return {
+      message: 'Departments retrived successfully',
       items: departments.map((department) => ({
         id: department.id,
         name: department.name,
@@ -290,7 +295,7 @@ export class DepartmentsService {
         ),
       ).length;
 
-      return {
+      const data = {
         id: department.id,
         name: department.name,
         code: department.code,
@@ -313,6 +318,11 @@ export class DepartmentsService {
         })),
 
         overallCompletion: completionPercentage,
+      };
+
+      return {
+        message: 'Department retrived successfully',
+        data,
       };
     } catch (err) {
       console.log('Department findOne error:', err);
@@ -406,7 +416,7 @@ export class DepartmentsService {
         });
       }
 
-      return tx.department.findUnique({
+      const data = await tx.department.findUnique({
         where: {
           id,
         },
@@ -423,6 +433,10 @@ export class DepartmentsService {
           },
         },
       });
+      return {
+        message: 'Department updated successfully',
+        data,
+      };
     });
   }
   // =========================================================
@@ -462,7 +476,7 @@ export class DepartmentsService {
       );
     }
 
-    await this.prisma.department.delete({
+    const data = await this.prisma.department.delete({
       where: {
         id,
       },
@@ -470,6 +484,7 @@ export class DepartmentsService {
 
     return {
       message: 'Department deleted successfully',
+      data,
     };
   }
 }

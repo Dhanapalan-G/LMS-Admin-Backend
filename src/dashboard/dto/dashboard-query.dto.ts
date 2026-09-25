@@ -7,9 +7,10 @@ import {
   IsEnum,
   IsString,
   IsUUID,
+  IsArray,
 } from 'class-validator';
 
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 
 import { CourseStatus } from '../../generated/prisma/client';
 
@@ -62,26 +63,44 @@ export class DashboardQueryDto {
   // --------------------------------------------------
 
   @ApiPropertyOptional({
-    example: 'CBSE',
-    description: 'Filter dashboard data by school board',
+    type: [String],
+    example: ['CBSE', 'Matriculation'],
+    description: 'Filter dashboard data by one or more school boards',
+    isArray: true,
   })
   @IsOptional()
-  @IsString()
-  board?: string;
+  @IsArray()
+  @IsString({ each: true })
+  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
+  boards?: string[];
 
   @ApiPropertyOptional({
-    example: 'uuid',
-    description: 'Filter dashboard data by school',
+    type: [String],
+    example: [
+      '550e8400-e29b-41d4-a716-446655440000',
+      '550e8400-e29b-41d4-a716-446655440001',
+    ],
+    description: 'Filter dashboard data by one or more schools',
+    isArray: true,
   })
   @IsOptional()
-  @IsUUID()
-  schoolId?: string;
+  @IsArray()
+  @IsUUID('4', { each: true })
+  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
+  schoolIds?: string[];
 
   @ApiPropertyOptional({
-    example: 'uuid',
-    description: 'Filter dashboard data by learner role',
+    type: [String],
+    example: [
+      '550e8400-e29b-41d4-a716-446655440002',
+      '550e8400-e29b-41d4-a716-446655440003',
+    ],
+    description: 'Filter dashboard data by one or more learner roles',
+    isArray: true,
   })
   @IsOptional()
-  @IsUUID()
-  roleId?: string;
+  @IsArray()
+  @IsUUID('4', { each: true })
+  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
+  roleIds?: string[];
 }

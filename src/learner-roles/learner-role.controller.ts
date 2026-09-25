@@ -125,7 +125,7 @@ export class LearnerRolesController {
     schema: {
       example: {
         success: true,
-        message: 'Request successful',
+        message: 'Learner roles retrieved successfully',
         data: {
           items: [
             {
@@ -197,7 +197,7 @@ export class LearnerRolesController {
     schema: {
       example: {
         success: true,
-        message: 'Request successful',
+        message: 'Learner role retrieved successfully',
         data: {
           id: 'learner-role-uuid',
           name: 'Teacher',

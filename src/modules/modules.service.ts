@@ -21,7 +21,7 @@ export class ModulesService {
       throw new NotFoundException('Course not found');
     }
 
-    return this.prisma.courseModule.create({
+    const data = await this.prisma.courseModule.create({
       data: {
         title: dto.title,
         description: dto.description,
@@ -37,6 +37,11 @@ export class ModulesService {
         orderIndex: true,
       },
     });
+
+    return {
+      message: 'Module created successfully',
+      data,
+    };
   }
 
   async findAll(courseId: string, paginationDto: PaginationDto) {
@@ -87,6 +92,7 @@ export class ModulesService {
     const totalPages = Math.ceil(total / limit);
 
     return {
+      message: 'Modules retrived successfully',
       items: modules,
       meta: {
         page,
@@ -110,7 +116,7 @@ export class ModulesService {
       throw new NotFoundException('Module not found');
     }
 
-    return this.prisma.courseModule.update({
+    const data = await this.prisma.courseModule.update({
       where: {
         id,
       },
@@ -125,6 +131,11 @@ export class ModulesService {
         orderIndex: true,
       },
     });
+
+    return {
+      message: 'Module updated successfully',
+      data,
+    };
   }
 
   async remove(id: string) {
@@ -138,13 +149,15 @@ export class ModulesService {
       throw new NotFoundException('Module not found');
     }
 
-    await this.prisma.courseModule.delete({
+    const data = await this.prisma.courseModule.delete({
       where: {
         id,
       },
     });
+
     return {
-      id: module.id,
+      message: 'Module deleted successfully',
+      data,
     };
   }
 }

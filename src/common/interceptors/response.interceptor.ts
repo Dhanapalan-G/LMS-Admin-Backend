@@ -12,8 +12,16 @@ export class ResponseInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     return next.handle().pipe(
       map((response) => {
-        // If service already provides message + data
-        if (response && typeof response === 'object' && 'data' in response) {
+        // --------------------------------------------------
+        // SERVICE RESPONSE HAS message + data
+        // --------------------------------------------------
+
+        if (
+          response &&
+          typeof response === 'object' &&
+          'message' in response &&
+          'data' in response
+        ) {
           return {
             success: true,
             message: response.message ?? 'Request successful',
@@ -21,7 +29,24 @@ export class ResponseInterceptor implements NestInterceptor {
           };
         }
 
-        // Normal response including pagination
+        // --------------------------------------------------
+        // SERVICE RESPONSE HAS message + items/meta
+        // --------------------------------------------------
+
+        if (response && typeof response === 'object' && 'message' in response) {
+          const { message, ...data } = response;
+
+          return {
+            success: true,
+            message: message ?? 'Request successful',
+            data,
+          };
+        }
+
+        // --------------------------------------------------
+        // NORMAL RESPONSE
+        // --------------------------------------------------
+
         return {
           success: true,
           message: 'Request successful',

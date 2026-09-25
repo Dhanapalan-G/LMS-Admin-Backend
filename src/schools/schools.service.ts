@@ -24,7 +24,7 @@ export class SchoolsService {
       throw new ConflictException('School code already exists');
     }
 
-    return this.prisma.school.create({
+    const data = await this.prisma.school.create({
       data: {
         name: dto.name,
         code: dto.code,
@@ -39,6 +39,10 @@ export class SchoolsService {
         isActive: true,
       },
     });
+    return {
+      message: 'School created successfully',
+      data,
+    };
   }
 
   async findAll(
@@ -194,6 +198,7 @@ export class SchoolsService {
     const totalPages = Math.ceil(total / limit);
 
     return {
+      message: 'Schools retrived successfully',
       items,
       meta: {
         page,
@@ -372,7 +377,7 @@ export class SchoolsService {
     // Response
     // ------------------------------------------
 
-    return {
+    const data = {
       id: school.id,
       name: school.name,
       code: school.code,
@@ -393,6 +398,10 @@ export class SchoolsService {
       assignedDepartments,
 
       overallCompletion: completionPercentage,
+    };
+    return {
+      message: 'School retrived successfully',
+      data,
     };
   }
 
@@ -420,7 +429,7 @@ export class SchoolsService {
       }
     }
 
-    return this.prisma.school.update({
+    const data = await this.prisma.school.update({
       where: {
         id,
       },
@@ -449,6 +458,11 @@ export class SchoolsService {
         isActive: true,
       },
     });
+
+    return {
+      message: 'School updated successfully',
+      data,
+    };
   }
 
   async remove(id: string) {
@@ -462,7 +476,7 @@ export class SchoolsService {
       throw new NotFoundException('School not found');
     }
 
-    return this.prisma.school.delete({
+    const data = await this.prisma.school.delete({
       where: {
         id,
       },
@@ -474,5 +488,10 @@ export class SchoolsService {
         isActive: true,
       },
     });
+
+    return {
+      message: 'School deleted successfully',
+      data,
+    };
   }
 }

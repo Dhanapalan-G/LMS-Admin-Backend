@@ -104,7 +104,7 @@ export class LessonsService {
     // 3. Convert BigInt for JSON response
     // -------------------------------------------------------
 
-    return {
+    const data = {
       ...lesson,
 
       files: lesson.files.map((file) => ({
@@ -112,6 +112,10 @@ export class LessonsService {
 
         fileSize: file.fileSize !== null ? Number(file.fileSize) : null,
       })),
+    };
+    return {
+      message: 'Lesson created successfully',
+      data,
     };
   }
 
@@ -237,7 +241,7 @@ export class LessonsService {
     // 4. Convert BigInt to number for JSON response
     // -------------------------------------------------------
 
-    return {
+    const data = {
       ...lesson,
 
       files: lesson.files.map((file) => ({
@@ -245,6 +249,10 @@ export class LessonsService {
 
         fileSize: file.fileSize !== null ? Number(file.fileSize) : null,
       })),
+    };
+    return {
+      message: 'Lesson updated successfully',
+      data,
     };
   }
 
@@ -360,8 +368,8 @@ export class LessonsService {
     const totalPages = Math.ceil(total / limit);
 
     return {
+      message: 'Lessons retrived successfully',
       items,
-
       meta: {
         page,
         limit,
@@ -429,7 +437,7 @@ export class LessonsService {
       );
     }
 
-    return {
+    const data = {
       ...lesson,
 
       files: lesson.files.map((file) => ({
@@ -437,6 +445,10 @@ export class LessonsService {
 
         fileSize: file.fileSize !== null ? Number(file.fileSize) : null,
       })),
+    };
+    return {
+      message: 'Lesson retrived successfully',
+      data,
     };
   }
 
@@ -465,7 +477,7 @@ export class LessonsService {
     // 2. Delete lesson
     // -------------------------------------------------------
 
-    await this.prisma.lesson.delete({
+    const data = await this.prisma.lesson.delete({
       where: {
         id: lessonId,
       },
@@ -476,7 +488,8 @@ export class LessonsService {
     // -------------------------------------------------------
 
     return {
-      id: lessonId,
+      message: 'Lesson deleted successfully',
+      data,
     };
   }
 }

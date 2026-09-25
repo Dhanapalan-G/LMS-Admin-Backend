@@ -1,4 +1,5 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
+
 import {
   IsArray,
   IsBoolean,
@@ -11,11 +12,12 @@ import {
   Max,
   Min,
 } from 'class-validator';
+
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ReportQueryDto {
   // ============================================================
-  // DATE RANGE
+  // DATE
   // ============================================================
 
   @ApiPropertyOptional({
@@ -43,20 +45,20 @@ export class ReportQueryDto {
   // ============================================================
 
   @ApiPropertyOptional({
-    description: 'Filter by school board.',
+    description: 'Filter the report by school board.',
     example: 'CBSE',
-    type: String,
   })
   @IsOptional()
   @IsString()
   board?: string;
 
   // ============================================================
-  // SCHOOL - MULTI SELECT
+  // SCHOOL IDS
   // ============================================================
 
   @ApiPropertyOptional({
-    description: 'Filter by one or more school IDs.',
+    description:
+      'Filter by one or more school IDs. Supports both a single ID and multiple IDs.',
     example: [
       '550e8400-e29b-41d4-a716-446655440000',
       '550e8400-e29b-41d4-a716-446655440003',
@@ -64,16 +66,20 @@ export class ReportQueryDto {
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) =>
+    value === undefined ? undefined : Array.isArray(value) ? value : [value],
+  )
   @IsArray()
   @IsUUID('4', { each: true })
   schoolIds?: string[];
 
   // ============================================================
-  // ROLE - MULTI SELECT
+  // ROLE IDS
   // ============================================================
 
   @ApiPropertyOptional({
-    description: 'Filter by one or more learner role IDs.',
+    description:
+      'Filter by one or more learner role IDs. Supports both a single ID and multiple IDs.',
     example: [
       '550e8400-e29b-41d4-a716-446655440001',
       '550e8400-e29b-41d4-a716-446655440005',
@@ -81,89 +87,103 @@ export class ReportQueryDto {
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) =>
+    value === undefined ? undefined : Array.isArray(value) ? value : [value],
+  )
   @IsArray()
   @IsUUID('4', { each: true })
   roleIds?: string[];
 
   // ============================================================
-  // DEPARTMENT - MULTI SELECT
+  // DEPARTMENT IDS
   // ============================================================
 
   @ApiPropertyOptional({
-    description: 'Filter by one or more department IDs.',
-    example: [
-      '550e8400-e29b-41d4-a716-446655440002',
-      '550e8400-e29b-41d4-a716-446655440006',
-    ],
+    description:
+      'Filter by one or more department IDs. Supports both a single ID and multiple IDs.',
+    example: ['550e8400-e29b-41d4-a716-446655440002'],
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) =>
+    value === undefined ? undefined : Array.isArray(value) ? value : [value],
+  )
   @IsArray()
   @IsUUID('4', { each: true })
   departmentIds?: string[];
 
   // ============================================================
-  // LEARNING CATEGORY - MULTI SELECT
+  // CATEGORY IDS
   // ============================================================
 
   @ApiPropertyOptional({
-    description: 'Filter by one or more learning category IDs.',
-    example: [
-      '550e8400-e29b-41d4-a716-446655440008',
-      '550e8400-e29b-41d4-a716-446655440009',
-    ],
+    description:
+      'Filter by one or more learning category IDs. Supports both a single ID and multiple IDs.',
+    example: ['550e8400-e29b-41d4-a716-446655440008'],
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) =>
+    value === undefined ? undefined : Array.isArray(value) ? value : [value],
+  )
   @IsArray()
   @IsUUID('4', { each: true })
   categoryIds?: string[];
 
   // ============================================================
-  // COURSE - MULTI SELECT
+  // COURSE IDS
   // ============================================================
 
   @ApiPropertyOptional({
-    description: 'Filter by one or more learning course IDs.',
-    example: [
-      '550e8400-e29b-41d4-a716-446655440004',
-      '550e8400-e29b-41d4-a716-446655440007',
-    ],
+    description:
+      'Filter by one or more course IDs. Supports both a single ID and multiple IDs.',
+    example: ['550e8400-e29b-41d4-a716-446655440004'],
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) =>
+    value === undefined ? undefined : Array.isArray(value) ? value : [value],
+  )
   @IsArray()
   @IsUUID('4', { each: true })
   courseIds?: string[];
 
   // ============================================================
-  // COMPLETION STATUS - MULTI SELECT
+  // COMPLETION STATUS
   // ============================================================
 
   @ApiPropertyOptional({
     description: 'Filter by one or more completion statuses.',
-    example: ['COMPLETED', 'IN_PROGRESS', 'NOT_STARTED', 'OVERDUE'],
+    example: ['COMPLETED', 'IN_PROGRESS'],
+    enum: ['COMPLETED', 'IN_PROGRESS', 'NOT_STARTED', 'OVERDUE'],
     type: [String],
-    isArray: true,
   })
   @IsOptional()
+  @Transform(({ value }) =>
+    value === undefined ? undefined : Array.isArray(value) ? value : [value],
+  )
   @IsArray()
-  @IsString({ each: true })
+  @IsIn(['COMPLETED', 'IN_PROGRESS', 'NOT_STARTED', 'OVERDUE'], {
+    each: true,
+  })
   completionStatuses?: string[];
 
   // ============================================================
-  // CERTIFICATION STATUS - MULTI SELECT
+  // CERTIFICATION STATUS
   // ============================================================
 
   @ApiPropertyOptional({
     description: 'Filter by one or more certification statuses.',
     example: ['CERTIFIED', 'NOT_CERTIFIED'],
+    enum: ['CERTIFIED', 'NOT_CERTIFIED'],
     type: [String],
-    isArray: true,
   })
   @IsOptional()
+  @Transform(({ value }) =>
+    value === undefined ? undefined : Array.isArray(value) ? value : [value],
+  )
   @IsArray()
-  @IsString({ each: true })
+  @IsIn(['CERTIFIED', 'NOT_CERTIFIED'], { each: true })
   certificationStatuses?: string[];
 
   // ============================================================
@@ -185,9 +205,8 @@ export class ReportQueryDto {
   // ============================================================
 
   @ApiPropertyOptional({
-    description: 'Search report results.',
-    example: 'Teacher',
-    type: String,
+    description: 'Search report records.',
+    example: 'SBOA',
   })
   @IsOptional()
   @IsString()
@@ -230,21 +249,43 @@ export class ReportQueryDto {
   // ============================================================
 
   @ApiPropertyOptional({
-    description: 'Field used for sorting the report results.',
     example: 'completionPercentage',
-    default: 'completionPercentage',
+    enum: [
+      'name',
+      'users',
+      'coursesAssigned',
+      'modules',
+      'completed',
+      'inProgress',
+      'notStarted',
+      'overdue',
+      'avgQuiz',
+      'completionPercentage',
+    ],
+    description: 'Column to sort by.',
   })
   @IsOptional()
-  @IsString()
-  sortBy?: string = 'completionPercentage';
+  @IsIn([
+    'name',
+    'users',
+    'coursesAssigned',
+    'modules',
+    'completed',
+    'inProgress',
+    'notStarted',
+    'overdue',
+    'avgQuiz',
+    'completionPercentage',
+  ])
+  sortBy?: string;
 
   @ApiPropertyOptional({
-    description: 'Sort direction.',
     example: 'desc',
-    default: 'desc',
     enum: ['asc', 'desc'],
+    default: 'desc',
+    description: 'Sort direction.',
   })
   @IsOptional()
   @IsIn(['asc', 'desc'])
-  sortOrder?: 'asc' | 'desc' = 'desc';
+  sortOrder?: 'asc' | 'desc';
 }

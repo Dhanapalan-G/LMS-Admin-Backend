@@ -2,6 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { ReportQueryDto } from './dto/report-query.dto';
+import { Prisma } from '../generated/prisma/client';
+import { IndividualUserReportQueryDto } from './dto/Individual-user-report-query.dto';
 
 @Injectable()
 export class ReportsService {
@@ -441,12 +443,25 @@ export class ReportsService {
       .filter(
         (school): school is NonNullable<typeof school> => school !== null,
       );
-
     // ============================================================
     // SORTING
     // ============================================================
 
-    const sortBy = query.sortBy ?? 'completionPercentage';
+    const allowedSortFields = [
+      'name',
+      'users',
+      'coursesAssigned',
+      'completed',
+      'inProgress',
+      'notStarted',
+      'overdue',
+      'avgQuiz',
+      'completionPercentage',
+    ];
+
+    const sortBy = allowedSortFields.includes(query.sortBy ?? '')
+      ? query.sortBy!
+      : 'completionPercentage';
 
     const sortOrder = query.sortOrder ?? 'desc';
 
@@ -455,6 +470,12 @@ export class ReportsService {
       let bValue: number | string;
 
       switch (sortBy) {
+        case 'school':
+        case 'schoolName':
+          aValue = a.school.name;
+          bValue = b.school.name;
+          break;
+
         case 'users':
           aValue = a.users;
           bValue = b.users;
@@ -510,7 +531,6 @@ export class ReportsService {
         ? String(aValue).localeCompare(String(bValue))
         : String(bValue).localeCompare(String(aValue));
     });
-
     // ============================================================
     // SUMMARY
     // ============================================================
@@ -558,6 +578,7 @@ export class ReportsService {
     // ============================================================
 
     return {
+      message: 'School-wise report retrived successfully',
       summary: {
         schools: schoolReports.length,
 
@@ -580,7 +601,7 @@ export class ReportsService {
 
       schools: schoolReports,
 
-      pagination: {
+      meta: {
         page,
 
         limit,
@@ -591,6 +612,9 @@ export class ReportsService {
       },
     };
   }
+  // ============================================================
+  // SCHOOL WISE REPORT
+  // ============================================================
 
   async getSchoolReport(schoolId: string, query: ReportQueryDto) {
     // ============================================================
@@ -1168,6 +1192,7 @@ export class ReportsService {
     // ============================================================
 
     return {
+      message: 'School listing report retrived successfully',
       school: {
         id: school.id,
         name: school.name,
@@ -1192,6 +1217,10 @@ export class ReportsService {
       departments,
     };
   }
+
+  // ============================================================
+  // ROLE WISE REPORT
+  // ============================================================
 
   async getRoleWiseReport(query: ReportQueryDto) {
     const page = query.page ?? 1;
@@ -1859,33 +1888,105 @@ export class ReportsService {
           role.code?.toLowerCase().includes(search),
       );
     }
-
     // ============================================================
-    // 7. SORT
+    // SORT
     // ============================================================
 
-    const sortBy = query.sortBy ?? 'completionPercentage';
+    const allowedSortFields = [
+      'name',
+      'users',
+      'coursesAssigned',
+      'completed',
+      'inProgress',
+      'notStarted',
+      'overdue',
+      'avgQuiz',
+      'completionPercentage',
+    ];
+
+    const sortBy = allowedSortFields.includes(query.sortBy ?? '')
+      ? query.sortBy!
+      : 'completionPercentage';
 
     const sortOrder = query.sortOrder ?? 'desc';
 
     filteredRoleReports.sort((a, b) => {
-      const aValue = a[sortBy as keyof typeof a];
+      let aValue: string | number;
+      let bValue: string | number;
 
-      const bValue = b[sortBy as keyof typeof b];
+      switch (sortBy) {
+        case 'role':
+        case 'roleName':
+        case 'name':
+          aValue = a.name;
+          bValue = b.name;
+          break;
+
+        case 'code':
+          aValue = a.code;
+          bValue = b.code;
+          break;
+
+        case 'users':
+          aValue = a.users;
+          bValue = b.users;
+          break;
+
+        case 'coursesAssigned':
+          aValue = a.coursesAssigned;
+          bValue = b.coursesAssigned;
+          break;
+
+        case 'modules':
+          aValue = a.modules;
+          bValue = b.modules;
+          break;
+
+        case 'completed':
+          aValue = a.completed;
+          bValue = b.completed;
+          break;
+
+        case 'inProgress':
+          aValue = a.inProgress;
+          bValue = b.inProgress;
+          break;
+
+        case 'notStarted':
+          aValue = a.notStarted;
+          bValue = b.notStarted;
+          break;
+
+        case 'overdue':
+          aValue = a.overdue;
+          bValue = b.overdue;
+          break;
+
+        case 'modulesCompleted':
+          aValue = a.modulesCompleted;
+          bValue = b.modulesCompleted;
+          break;
+
+        case 'avgQuiz':
+          aValue = a.avgQuiz;
+          bValue = b.avgQuiz;
+          break;
+
+        case 'completionPercentage':
+        default:
+          aValue = a.completionPercentage;
+          bValue = b.completionPercentage;
+          break;
+      }
 
       if (typeof aValue === 'number' && typeof bValue === 'number') {
         return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
       }
 
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortOrder === 'asc'
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      }
-
-      return 0;
+      return sortOrder === 'asc'
+        ? String(aValue).localeCompare(String(bValue))
+        : String(bValue).localeCompare(String(aValue));
     });
-
     // ============================================================
     // 8. ROLE COMPARISON
     //
@@ -1959,6 +2060,8 @@ export class ReportsService {
     // ============================================================
 
     return {
+      message: 'Role-wise reports retrived successfully',
+
       summary: {
         roles: filteredRoleReports.length,
 
@@ -1983,12 +2086,1304 @@ export class ReportsService {
 
       roles: paginatedRoles,
 
-      pagination: {
+      meta: {
         page,
         limit,
         total,
         totalPages: Math.ceil(total / limit),
       },
+    };
+  }
+
+  // ============================================================
+  // DEPARTMENT WISE REPORT
+  // ============================================================
+
+  async getDepartmentWiseReport(query: ReportQueryDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 5;
+    const skip = (page - 1) * limit;
+
+    const now = new Date();
+
+    // ============================================================
+    // LEARNER FILTER
+    // ============================================================
+
+    const learnerWhere: Prisma.LearnerWhereInput = {
+      ...(query.schoolIds?.length && {
+        schoolId: {
+          in: query.schoolIds,
+        },
+      }),
+
+      ...(query.roleIds?.length && {
+        learnerRoleId: {
+          in: query.roleIds,
+        },
+      }),
+
+      ...(query.departmentIds?.length && {
+        departmentId: {
+          in: query.departmentIds,
+        },
+      }),
+    };
+
+    // ============================================================
+    // GET DEPARTMENTS
+    //
+    // IMPORTANT:
+    // Fetch departments independently so departments with
+    // zero learners are also included.
+    // ============================================================
+
+    const departments = await this.prisma.department.findMany({
+      where: {
+        ...(query.departmentIds?.length && {
+          id: {
+            in: query.departmentIds,
+          },
+        }),
+
+        ...(query.search && {
+          name: {
+            contains: query.search,
+            mode: 'insensitive',
+          },
+        }),
+      },
+
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    // ============================================================
+    // GET LEARNERS
+    // ============================================================
+
+    const learners = await this.prisma.learner.findMany({
+      where: learnerWhere,
+
+      select: {
+        id: true,
+        departmentId: true,
+
+        department: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+
+        learnerRole: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+
+        // ========================================================
+        // ENROLLMENTS
+        // ========================================================
+
+        enrollments: {
+          where: {
+            ...(query.courseIds?.length && {
+              courseId: {
+                in: query.courseIds,
+              },
+            }),
+
+            ...(query.fromDate && {
+              enrolledAt: {
+                gte: new Date(query.fromDate),
+              },
+            }),
+
+            ...(query.toDate && {
+              enrolledAt: {
+                lte: new Date(`${query.toDate}T23:59:59.999Z`),
+              },
+            }),
+
+            ...(query.isMandatory !== undefined && {
+              course: {
+                isMandatory: query.isMandatory,
+              },
+            }),
+          },
+
+          select: {
+            id: true,
+            courseId: true,
+            completedAt: true,
+            dueDate: true,
+
+            course: {
+              select: {
+                id: true,
+                isMandatory: true,
+
+                modules: {
+                  select: {
+                    id: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+
+        // ========================================================
+        // PROGRESS
+        // ========================================================
+
+        progress: {
+          select: {
+            percentage: true,
+            status: true,
+
+            lesson: {
+              select: {
+                module: {
+                  select: {
+                    id: true,
+                    courseId: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+
+        // ========================================================
+        // CERTIFICATES
+        // ========================================================
+
+        certificates: {
+          select: {
+            id: true,
+            courseId: true,
+          },
+        },
+
+        // ========================================================
+        // QUIZ ATTEMPTS
+        // ========================================================
+
+        quizAttempts: {
+          where: {
+            completed: true,
+          },
+
+          select: {
+            score: true,
+          },
+        },
+      },
+    });
+
+    // ============================================================
+    // HELPER: COMPLETION STATUS
+    // ============================================================
+
+    const getCompletionStatus = (
+      learner: (typeof learners)[number],
+      enrollment: (typeof learners)[number]['enrollments'][number],
+    ): 'COMPLETED' | 'IN_PROGRESS' | 'NOT_STARTED' | 'OVERDUE' => {
+      // ----------------------------------------------------------
+      // COMPLETED
+      // ----------------------------------------------------------
+
+      if (enrollment.completedAt) {
+        return 'COMPLETED';
+      }
+
+      // ----------------------------------------------------------
+      // OVERDUE
+      // ----------------------------------------------------------
+
+      if (enrollment.dueDate && enrollment.dueDate < now) {
+        return 'OVERDUE';
+      }
+
+      // ----------------------------------------------------------
+      // COURSE PROGRESS
+      // ----------------------------------------------------------
+
+      const courseProgress = learner.progress.filter(
+        (progress) => progress.lesson.module.courseId === enrollment.courseId,
+      );
+
+      if (courseProgress.length === 0) {
+        return 'NOT_STARTED';
+      }
+
+      const averageProgress =
+        courseProgress.reduce(
+          (sum, progress) => sum + Number(progress.percentage ?? 0),
+          0,
+        ) / courseProgress.length;
+
+      if (averageProgress >= 100) {
+        return 'COMPLETED';
+      }
+
+      if (averageProgress > 0) {
+        return 'IN_PROGRESS';
+      }
+
+      return 'NOT_STARTED';
+    };
+
+    // ============================================================
+    // HELPER: CERTIFICATION STATUS
+    // ============================================================
+
+    const getCertificationStatus = (
+      learner: (typeof learners)[number],
+      enrollment: (typeof learners)[number]['enrollments'][number],
+    ): 'CERTIFIED' | 'NOT_CERTIFIED' => {
+      const certified = learner.certificates.some(
+        (certificate) => certificate.courseId === enrollment.courseId,
+      );
+
+      return certified ? 'CERTIFIED' : 'NOT_CERTIFIED';
+    };
+
+    // ============================================================
+    // BUILD LEARNER ENROLLMENTS AFTER STATUS FILTERS
+    // ============================================================
+
+    const filteredLearners = learners
+      .map((learner) => {
+        const filteredEnrollments = learner.enrollments.filter((enrollment) => {
+          // --------------------------------------------------
+          // COMPLETION STATUS
+          // --------------------------------------------------
+
+          const completionStatus = getCompletionStatus(learner, enrollment);
+
+          if (
+            query.completionStatuses?.length &&
+            !query.completionStatuses.includes(completionStatus)
+          ) {
+            return false;
+          }
+
+          // --------------------------------------------------
+          // CERTIFICATION STATUS
+          // --------------------------------------------------
+
+          const certificationStatus = getCertificationStatus(
+            learner,
+            enrollment,
+          );
+
+          if (
+            query.certificationStatuses?.length &&
+            !query.certificationStatuses.includes(certificationStatus)
+          ) {
+            return false;
+          }
+
+          return true;
+        });
+
+        return {
+          ...learner,
+          enrollments: filteredEnrollments,
+        };
+      })
+      .filter((learner) => {
+        // When learning-level filters are used,
+        // remove learners that have no matching enrollment.
+
+        if (
+          query.courseIds?.length ||
+          query.completionStatuses?.length ||
+          query.certificationStatuses?.length
+        ) {
+          return learner.enrollments.length > 0;
+        }
+
+        return true;
+      });
+
+    // ============================================================
+    // GROUP LEARNERS BY DEPARTMENT
+    // ============================================================
+
+    const departmentLearnerMap = new Map<string, typeof filteredLearners>();
+
+    for (const department of departments) {
+      departmentLearnerMap.set(department.id, []);
+    }
+
+    for (const learner of filteredLearners) {
+      if (!learner.departmentId) {
+        continue;
+      }
+
+      if (!departmentLearnerMap.has(learner.departmentId)) {
+        continue;
+      }
+
+      departmentLearnerMap.get(learner.departmentId)!.push(learner);
+    }
+
+    // ============================================================
+    // CALCULATE DEPARTMENT REPORT
+    // ============================================================
+
+    const departmentReports = departments.map((department) => {
+      const departmentLearners = departmentLearnerMap.get(department.id) ?? [];
+
+      let coursesAssigned = 0;
+      let completed = 0;
+      let inProgress = 0;
+      let notStarted = 0;
+      let overdue = 0;
+
+      const quizScores: number[] = [];
+
+      // --------------------------------------------------------
+      // LEARNERS
+      // --------------------------------------------------------
+
+      for (const learner of departmentLearners) {
+        // ======================================================
+        // QUIZ SCORES
+        // ======================================================
+
+        for (const attempt of learner.quizAttempts) {
+          if (attempt.score !== null) {
+            quizScores.push(Number(attempt.score));
+          }
+        }
+
+        // ======================================================
+        // ENROLLMENTS
+        // ======================================================
+
+        for (const enrollment of learner.enrollments) {
+          coursesAssigned++;
+
+          const completionStatus = getCompletionStatus(learner, enrollment);
+
+          switch (completionStatus) {
+            case 'COMPLETED':
+              completed++;
+              break;
+
+            case 'IN_PROGRESS':
+              inProgress++;
+              break;
+
+            case 'NOT_STARTED':
+              notStarted++;
+              break;
+
+            case 'OVERDUE':
+              overdue++;
+              break;
+          }
+        }
+      }
+
+      // ========================================================
+      // COMPLETION PERCENTAGE
+      // ========================================================
+
+      const completionPercentage =
+        coursesAssigned > 0
+          ? Math.round((completed / coursesAssigned) * 100)
+          : 0;
+
+      // ========================================================
+      // AVG QUIZ
+      // ========================================================
+
+      const avgQuiz =
+        quizScores.length > 0
+          ? Math.round(
+              quizScores.reduce((sum, score) => sum + score, 0) /
+                quizScores.length,
+            )
+          : 0;
+
+      return {
+        id: department.id,
+        name: department.name,
+
+        users: departmentLearners.length,
+
+        coursesAssigned,
+
+        completed,
+
+        inProgress,
+
+        notStarted,
+
+        overdue,
+
+        avgQuiz,
+
+        completionPercentage,
+      };
+    });
+
+    // ============================================================
+    // SORT
+    // ============================================================
+    const allowedSortFields = [
+      'name',
+      'users',
+      'coursesAssigned',
+      'completed',
+      'inProgress',
+      'notStarted',
+      'overdue',
+      'avgQuiz',
+      'completionPercentage',
+    ];
+
+    const sortBy = allowedSortFields.includes(query.sortBy ?? '')
+      ? query.sortBy!
+      : 'completionPercentage';
+
+    const sortOrder = query.sortOrder ?? 'desc';
+
+    departmentReports.sort((a, b) => {
+      let aValue: string | number;
+      let bValue: string | number;
+
+      switch (sortBy) {
+        case 'department':
+        case 'departmentName':
+        case 'name':
+          aValue = a.name;
+          bValue = b.name;
+          break;
+
+        case 'users':
+          aValue = a.users;
+          bValue = b.users;
+          break;
+
+        case 'coursesAssigned':
+          aValue = a.coursesAssigned;
+          bValue = b.coursesAssigned;
+          break;
+
+        case 'completed':
+          aValue = a.completed;
+          bValue = b.completed;
+          break;
+
+        case 'inProgress':
+          aValue = a.inProgress;
+          bValue = b.inProgress;
+          break;
+
+        case 'notStarted':
+          aValue = a.notStarted;
+          bValue = b.notStarted;
+          break;
+
+        case 'overdue':
+          aValue = a.overdue;
+          bValue = b.overdue;
+          break;
+
+        case 'avgQuiz':
+          aValue = a.avgQuiz;
+          bValue = b.avgQuiz;
+          break;
+
+        case 'completionPercentage':
+        default:
+          aValue = a.completionPercentage;
+          bValue = b.completionPercentage;
+          break;
+      }
+
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+
+      return sortOrder === 'asc'
+        ? String(aValue).localeCompare(String(bValue))
+        : String(bValue).localeCompare(String(aValue));
+    });
+    // ============================================================
+    // SUMMARY
+    // ============================================================
+
+    const summary = departmentReports.reduce(
+      (acc, department) => {
+        acc.totalUsers += department.users;
+
+        acc.coursesAssigned += department.coursesAssigned;
+
+        acc.completed += department.completed;
+
+        acc.inProgress += department.inProgress;
+
+        acc.notStarted += department.notStarted;
+
+        acc.overdue += department.overdue;
+
+        if (department.avgQuiz > 0) {
+          acc.quizScores.push(department.avgQuiz);
+        }
+
+        return acc;
+      },
+      {
+        totalUsers: 0,
+        coursesAssigned: 0,
+        completed: 0,
+        inProgress: 0,
+        notStarted: 0,
+        overdue: 0,
+        quizScores: [] as number[],
+      },
+    );
+
+    // ============================================================
+    // AVG QUIZ
+    // ============================================================
+
+    const avgQuiz =
+      summary.quizScores.length > 0
+        ? Math.round(
+            summary.quizScores.reduce((sum, score) => sum + score, 0) /
+              summary.quizScores.length,
+          )
+        : 0;
+
+    // ============================================================
+    // PAGINATION
+    // ============================================================
+
+    const total = departmentReports.length;
+
+    const paginatedDepartments = departmentReports.slice(skip, skip + limit);
+
+    const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
+
+    // ============================================================
+    // DEPARTMENT COMPARISON
+    //
+    // Should represent ALL departments,
+    // not only the current pagination page.
+    // ============================================================
+
+    const departmentComparison = departmentReports.map((department) => ({
+      id: department.id,
+      name: department.name,
+      completionPercentage: department.completionPercentage,
+    }));
+
+    // ============================================================
+    // RESPONSE
+    // ============================================================
+
+    return {
+      message: 'Department-wise reports retrived successfully',
+      summary: {
+        departments: total,
+
+        totalUsers: summary.totalUsers,
+
+        coursesAssigned: summary.coursesAssigned,
+
+        completed: summary.completed,
+
+        inProgress: summary.inProgress,
+
+        notStarted: summary.notStarted,
+
+        overdue: summary.overdue,
+
+        avgQuiz,
+      },
+
+      departmentComparison,
+
+      departments: paginatedDepartments,
+
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+    };
+  }
+
+  // ============================================================
+  // INDIVIDUAL USER REPORT
+  // ============================================================
+
+  async getIndividualUserReport(query: IndividualUserReportQueryDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+
+    const skip = (page - 1) * limit;
+
+    const now = new Date();
+
+    // ------------------------------------------------------------
+    // LEARNER FILTER
+    // ------------------------------------------------------------
+
+    const learnerWhere: Prisma.LearnerWhereInput = {
+      ...(query.schoolId && {
+        schoolId: query.schoolId,
+      }),
+
+      ...(query.learnerRoleId && {
+        learnerRoleId: query.learnerRoleId,
+      }),
+
+      ...(query.search && {
+        OR: [
+          {
+            name: {
+              contains: query.search,
+              mode: 'insensitive',
+            },
+          },
+          {
+            email: {
+              contains: query.search,
+              mode: 'insensitive',
+            },
+          },
+          {
+            employeeId: {
+              contains: query.search,
+              mode: 'insensitive',
+            },
+          },
+        ],
+      }),
+    };
+
+    // ------------------------------------------------------------
+    // GET LEARNERS
+    // ------------------------------------------------------------
+
+    const learners = await this.prisma.learner.findMany({
+      where: learnerWhere,
+
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        employeeId: true,
+
+        department: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+
+        learnerRole: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+
+        school: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            board: true,
+          },
+        },
+
+        enrollments: {
+          select: {
+            id: true,
+            courseId: true,
+            completedAt: true,
+            dueDate: true,
+
+            course: {
+              select: {
+                id: true,
+                title: true,
+
+                modules: {
+                  select: {
+                    id: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+
+        progress: {
+          select: {
+            percentage: true,
+            status: true,
+
+            lesson: {
+              select: {
+                module: {
+                  select: {
+                    id: true,
+                    courseId: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // ------------------------------------------------------------
+    // CALCULATE USER REPORT
+    // ------------------------------------------------------------
+
+    const users = learners.map((learner) => {
+      let totalCourses = 0;
+
+      let totalProgress = 0;
+
+      let completedCourses = 0;
+
+      let inProgressCourses = 0;
+
+      let notStartedCourses = 0;
+
+      let overdueCourses = 0;
+
+      // ----------------------------------------------------------
+      // COURSE PROGRESS
+      // ----------------------------------------------------------
+
+      for (const enrollment of learner.enrollments) {
+        totalCourses++;
+
+        // --------------------------------------------------------
+        // COURSE COMPLETED
+        // --------------------------------------------------------
+
+        if (enrollment.completedAt) {
+          completedCourses++;
+
+          totalProgress += 100;
+
+          continue;
+        }
+
+        // --------------------------------------------------------
+        // FIND PROGRESS FOR THIS COURSE
+        // --------------------------------------------------------
+
+        const courseProgress = learner.progress.filter(
+          (progress) => progress.lesson.module.courseId === enrollment.courseId,
+        );
+
+        let coursePercentage = 0;
+
+        if (courseProgress.length > 0) {
+          coursePercentage =
+            courseProgress.reduce(
+              (sum, progress) => sum + Number(progress.percentage ?? 0),
+              0,
+            ) / courseProgress.length;
+        }
+
+        totalProgress += coursePercentage;
+
+        // --------------------------------------------------------
+        // OVERDUE
+        // --------------------------------------------------------
+
+        if (enrollment.dueDate && enrollment.dueDate < now) {
+          overdueCourses++;
+
+          continue;
+        }
+
+        // --------------------------------------------------------
+        // COURSE STATUS
+        // --------------------------------------------------------
+
+        if (coursePercentage >= 100) {
+          completedCourses++;
+        } else if (coursePercentage > 0) {
+          inProgressCourses++;
+        } else {
+          notStartedCourses++;
+        }
+      }
+
+      // ----------------------------------------------------------
+      // OVERALL PROGRESS
+      // ----------------------------------------------------------
+
+      const progress =
+        totalCourses > 0 ? Math.round(totalProgress / totalCourses) : 0;
+
+      // ----------------------------------------------------------
+      // OVERALL STATUS
+      // ----------------------------------------------------------
+
+      let status: 'COMPLETED' | 'IN_PROGRESS' | 'NOT_STARTED' | 'OVERDUE';
+
+      if (totalCourses === 0) {
+        status = 'NOT_STARTED';
+      } else if (overdueCourses > 0) {
+        status = 'OVERDUE';
+      } else if (completedCourses === totalCourses) {
+        status = 'COMPLETED';
+      } else if (inProgressCourses > 0) {
+        status = 'IN_PROGRESS';
+      } else {
+        status = 'NOT_STARTED';
+      }
+
+      return {
+        id: learner.id,
+
+        name: learner.name,
+
+        email: learner.email,
+
+        employeeId: learner.employeeId,
+
+        department: learner.department
+          ? {
+              id: learner.department.id,
+              name: learner.department.name,
+            }
+          : null,
+
+        learnerRole: learner.learnerRole
+          ? {
+              id: learner.learnerRole.id,
+              name: learner.learnerRole.name,
+            }
+          : null,
+
+        school: learner.school
+          ? {
+              id: learner.school.id,
+              name: learner.school.name,
+              code: learner.school.code,
+              board: learner.school.board,
+            }
+          : null,
+
+        progress,
+
+        status,
+      };
+    });
+
+    // ------------------------------------------------------------
+    // STATUS FILTER
+    // ------------------------------------------------------------
+
+    let filteredUsers = users;
+
+    if (query.status) {
+      filteredUsers = filteredUsers.filter(
+        (user) => user.status === query.status,
+      );
+    }
+
+    // ------------------------------------------------------------
+    // SORT
+    // ------------------------------------------------------------
+
+    const sortBy = query.sortBy ?? 'progress';
+
+    const sortOrder = query.sortOrder ?? 'desc';
+
+    filteredUsers.sort((a, b) => {
+      switch (sortBy) {
+        case 'name': {
+          const result = a.name.localeCompare(b.name);
+
+          return sortOrder === 'asc' ? result : -result;
+        }
+
+        case 'email': {
+          const result = a.email.localeCompare(b.email);
+
+          return sortOrder === 'asc' ? result : -result;
+        }
+
+        case 'employeeId': {
+          const result = String(a.employeeId ?? '').localeCompare(
+            String(b.employeeId ?? ''),
+          );
+
+          return sortOrder === 'asc' ? result : -result;
+        }
+
+        case 'status': {
+          const result = a.status.localeCompare(b.status);
+
+          return sortOrder === 'asc' ? result : -result;
+        }
+
+        case 'progress':
+        default:
+          return sortOrder === 'asc'
+            ? a.progress - b.progress
+            : b.progress - a.progress;
+      }
+    });
+
+    // ------------------------------------------------------------
+    // PAGINATION
+    // ------------------------------------------------------------
+
+    const total = filteredUsers.length;
+
+    const paginatedUsers = filteredUsers.slice(skip, skip + limit);
+
+    const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
+
+    // ------------------------------------------------------------
+    // RESPONSE
+    // ------------------------------------------------------------
+
+    return {
+      message: 'Overdue learners retrived successfully',
+      items: paginatedUsers,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+    };
+  }
+
+  // ============================================================
+  // INDIVIDUAL USER REPORT DETAILS
+  // ============================================================
+
+  async getIndividualUserReportDetails(learnerId: string) {
+    const learner = await this.prisma.learner.findUnique({
+      where: {
+        id: learnerId,
+      },
+
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        employeeId: true,
+
+        department: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+
+        learnerRole: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+
+        school: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            board: true,
+          },
+        },
+
+        enrollments: {
+          select: {
+            id: true,
+            courseId: true,
+            completedAt: true,
+            dueDate: true,
+
+            course: {
+              select: {
+                id: true,
+                title: true,
+                isMandatory: true,
+
+                modules: {
+                  select: {
+                    id: true,
+                    title: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+
+        progress: {
+          select: {
+            percentage: true,
+            status: true,
+
+            lesson: {
+              select: {
+                id: true,
+                title: true,
+
+                module: {
+                  select: {
+                    id: true,
+                    title: true,
+                    courseId: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+
+        quizAttempts: {
+          where: {
+            completed: true,
+            score: {
+              not: null,
+            },
+          },
+
+          select: {
+            id: true,
+            score: true,
+            completedAt: true,
+
+            quiz: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
+          },
+        },
+
+        certificates: {
+          select: {
+            id: true,
+            courseId: true,
+            issuedAt: true,
+          },
+        },
+      },
+    });
+
+    if (!learner) {
+      throw new NotFoundException('Learner not found');
+    }
+
+    const now = new Date();
+
+    // ------------------------------------------------------------
+    // COURSE REPORT
+    // ------------------------------------------------------------
+
+    const courses = learner.enrollments.map((enrollment) => {
+      const courseProgress = learner.progress.filter(
+        (progress) => progress.lesson.module.courseId === enrollment.courseId,
+      );
+
+      let progressPercentage = 0;
+
+      if (courseProgress.length > 0) {
+        progressPercentage =
+          courseProgress.reduce(
+            (sum, progress) => sum + Number(progress.percentage ?? 0),
+            0,
+          ) / courseProgress.length;
+      }
+
+      if (enrollment.completedAt) {
+        progressPercentage = 100;
+      }
+
+      let status: 'COMPLETED' | 'IN_PROGRESS' | 'NOT_STARTED' | 'OVERDUE';
+
+      if (enrollment.completedAt) {
+        status = 'COMPLETED';
+      } else if (enrollment.dueDate && enrollment.dueDate < now) {
+        status = 'OVERDUE';
+      } else if (progressPercentage > 0) {
+        status = 'IN_PROGRESS';
+      } else {
+        status = 'NOT_STARTED';
+      }
+
+      const modules = enrollment.course.modules.map((module) => {
+        const moduleProgress = courseProgress.filter(
+          (progress) => progress.lesson.module.id === module.id,
+        );
+
+        const modulePercentage =
+          moduleProgress.length > 0
+            ? Math.round(
+                moduleProgress.reduce(
+                  (sum, progress) => sum + Number(progress.percentage ?? 0),
+                  0,
+                ) / moduleProgress.length,
+              )
+            : 0;
+
+        return {
+          id: module.id,
+          title: module.title,
+          progress: modulePercentage,
+          status:
+            modulePercentage >= 100
+              ? 'COMPLETED'
+              : modulePercentage > 0
+                ? 'IN_PROGRESS'
+                : 'NOT_STARTED',
+        };
+      });
+
+      return {
+        id: enrollment.course.id,
+
+        title: enrollment.course.title,
+
+        isMandatory: enrollment.course.isMandatory,
+
+        dueDate: enrollment.dueDate,
+
+        completedAt: enrollment.completedAt,
+
+        progress: Math.round(progressPercentage),
+
+        status,
+
+        modules,
+      };
+    });
+
+    // ------------------------------------------------------------
+    // OVERALL PROGRESS
+    // ------------------------------------------------------------
+
+    const overallProgress =
+      courses.length > 0
+        ? Math.round(
+            courses.reduce((sum, course) => sum + course.progress, 0) /
+              courses.length,
+          )
+        : 0;
+
+    // ------------------------------------------------------------
+    // CERTIFICATES
+    // ------------------------------------------------------------
+
+    const certificates = learner.certificates.map((certificate) => ({
+      id: certificate.id,
+      courseId: certificate.courseId,
+      issuedAt: certificate.issuedAt,
+    }));
+
+    // ------------------------------------------------------------
+    // QUIZ
+    // ------------------------------------------------------------
+
+    const quizScores = learner.quizAttempts
+      .map((attempt) => (attempt.score === null ? null : Number(attempt.score)))
+      .filter((score): score is number => score !== null);
+
+    const avgQuiz =
+      quizScores.length > 0
+        ? Math.round(
+            quizScores.reduce((sum, score) => sum + score, 0) /
+              quizScores.length,
+          )
+        : 0;
+
+    // ------------------------------------------------------------
+    // SUMMARY
+    // ------------------------------------------------------------
+
+    const completed = courses.filter(
+      (course) => course.status === 'COMPLETED',
+    ).length;
+
+    const inProgress = courses.filter(
+      (course) => course.status === 'IN_PROGRESS',
+    ).length;
+
+    const notStarted = courses.filter(
+      (course) => course.status === 'NOT_STARTED',
+    ).length;
+
+    const overdue = courses.filter(
+      (course) => course.status === 'OVERDUE',
+    ).length;
+
+    const data = await {
+      learner: {
+        id: learner.id,
+        name: learner.name,
+        email: learner.email,
+        employeeId: learner.employeeId,
+
+        department: learner.department,
+
+        learnerRole: learner.learnerRole,
+
+        school: learner.school,
+      },
+
+      summary: {
+        totalCourses: courses.length,
+
+        completed,
+
+        inProgress,
+
+        notStarted,
+
+        overdue,
+
+        overallProgress,
+
+        avgQuiz,
+
+        certified: certificates.length > 0,
+      },
+
+      courses,
+
+      certificates,
+
+      quizAttempts: learner.quizAttempts,
+    };
+
+    return {
+      message: 'Overdue learner details retrived successfully',
+      data,
     };
   }
 }

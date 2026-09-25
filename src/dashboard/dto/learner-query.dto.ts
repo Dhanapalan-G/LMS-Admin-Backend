@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
 
 import { PaginationDto } from '../../common/dto/pagination.dto';
 
@@ -35,4 +35,43 @@ export class OverdueLearnerQueryDto extends PaginationDto {
   @IsOptional()
   @IsUUID()
   departmentId?: string;
+
+  // --------------------------------------------
+  // SORTING
+  // --------------------------------------------
+
+  @ApiPropertyOptional({
+    example: 'name',
+    enum: [
+      'name',
+      'role',
+      'school',
+      'department',
+      'status',
+      'progress',
+      'dueDate',
+    ],
+    description: 'Column to sort by',
+  })
+  @IsOptional()
+  @IsIn([
+    'name',
+    'role',
+    'school',
+    'department',
+    'status',
+    'progress',
+    'dueDate',
+  ])
+  sortBy?: string;
+
+  @ApiPropertyOptional({
+    example: 'asc',
+    enum: ['asc', 'desc'],
+    default: 'asc',
+    description: 'Sort direction',
+  })
+  @IsOptional()
+  @IsIn(['asc', 'desc'])
+  sortOrder?: 'asc' | 'desc';
 }

@@ -176,7 +176,7 @@ export class DepartmentsController {
     schema: {
       example: {
         success: true,
-        message: 'Request successful',
+        message: 'Department retrieved successfully',
         data: {
           id: 'department-uuid',
           name: 'Maths',

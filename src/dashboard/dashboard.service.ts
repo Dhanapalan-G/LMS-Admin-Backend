@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DashboardQueryDto } from './dto/dashboard-query.dto';
 import {
@@ -13,29 +13,43 @@ export class DashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getDashboard(query: DashboardQueryDto) {
+    // --------------------------------------------------
+    // LEARNER FILTER
+    // --------------------------------------------------
+
     const learnerWhere: Prisma.LearnerWhereInput = {
-      ...(query.schoolId && {
-        schoolId: query.schoolId,
+      ...(query.schoolIds?.length && {
+        schoolId: {
+          in: query.schoolIds,
+        },
       }),
 
-      ...(query.roleId && {
-        learnerRoleId: query.roleId,
+      ...(query.roleIds?.length && {
+        learnerRoleId: {
+          in: query.roleIds,
+        },
       }),
 
-      ...(query.board && {
+      ...(query.boards?.length && {
         school: {
-          board: query.board,
+          board: {
+            in: query.boards,
+          },
         },
       }),
     };
+
+    // --------------------------------------------------
+    // ENROLLMENT FILTER
+    // --------------------------------------------------
 
     const enrollmentWhere: Prisma.EnrollmentWhereInput = {
       learner: learnerWhere,
     };
 
-    // --------------------------------------------
+    // --------------------------------------------------
     // SUMMARY
-    // --------------------------------------------
+    // --------------------------------------------------
 
     const [
       totalSchools,
@@ -49,81 +63,158 @@ export class DashboardService {
       completedEnrollments,
       overdueLearners,
     ] = await Promise.all([
+      // --------------------------------------------
+      // TOTAL SCHOOLS
+      // --------------------------------------------
+
       this.prisma.school.count({
         where: {
           isActive: true,
-          ...(query.board && {
-            board: query.board,
+
+          ...(query.boards?.length && {
+            board: {
+              in: query.boards,
+            },
           }),
-          ...(query.schoolId && {
-            id: query.schoolId,
+
+          ...(query.schoolIds?.length && {
+            id: {
+              in: query.schoolIds,
+            },
           }),
         },
       }),
+
+      // --------------------------------------------
+      // TOTAL LEARNERS
+      // --------------------------------------------
 
       this.prisma.learner.count({
         where: learnerWhere,
       }),
 
+      // --------------------------------------------
+      // ACTIVE LEARNERS
+      // --------------------------------------------
+
       this.prisma.learner.count({
         where: {
           ...learnerWhere,
+
           status: LearnerStatus.ACTIVE,
         },
       }),
 
-      this.prisma.course.count(),
+      // --------------------------------------------
+      // TOTAL COURSES
+      // --------------------------------------------
+
+      this.prisma.course.count({
+        where: {
+          ...(query.status && {
+            status: query.status,
+          }),
+
+          ...(query.isMandatory !== undefined && {
+            isMandatory: query.isMandatory,
+          }),
+        },
+      }),
+
+      // --------------------------------------------
+      // PUBLISHED COURSES
+      // --------------------------------------------
 
       this.prisma.course.count({
         where: {
           status: CourseStatus.PUBLISHED,
+
+          ...(query.isMandatory !== undefined && {
+            isMandatory: query.isMandatory,
+          }),
         },
       }),
+
+      // --------------------------------------------
+      // DRAFT COURSES
+      // --------------------------------------------
 
       this.prisma.course.count({
         where: {
           status: CourseStatus.DRAFT,
+
+          ...(query.isMandatory !== undefined && {
+            isMandatory: query.isMandatory,
+          }),
         },
       }),
+
+      // --------------------------------------------
+      // MANDATORY COURSES
+      // --------------------------------------------
 
       this.prisma.course.count({
         where: {
           isMandatory: true,
+
+          ...(query.status && {
+            status: query.status,
+          }),
         },
       }),
+
+      // --------------------------------------------
+      // TOTAL ENROLLMENTS
+      // --------------------------------------------
 
       this.prisma.enrollment.count({
         where: enrollmentWhere,
       }),
 
+      // --------------------------------------------
+      // COMPLETED ENROLLMENTS
+      // --------------------------------------------
+
       this.prisma.enrollment.count({
         where: {
           ...enrollmentWhere,
+
           completedAt: {
             not: null,
           },
         },
       }),
 
+      // --------------------------------------------
+      // OVERDUE LEARNERS
+      // --------------------------------------------
+
       this.prisma.enrollment.count({
         where: {
           ...enrollmentWhere,
+
           completedAt: null,
+
           dueDate: {
+            not: null,
             lt: new Date(),
           },
         },
       }),
     ]);
 
+    // --------------------------------------------------
+    // LEARNING COMPLETION
+    // --------------------------------------------------
+
     const learningCompletion =
       totalEnrollments > 0
         ? Math.round((completedEnrollments / totalEnrollments) * 100)
         : 0;
 
-    // --------------------------------------------
-    // CONTINUE WITH OTHER DASHBOARD SECTIONS
-    // --------------------------------------------
+    // --------------------------------------------------
+    // OTHER DASHBOARD SECTIONS
+    // --------------------------------------------------
 
     const [
       roleWiseCompletion,
@@ -140,7 +231,11 @@ export class DashboardService {
       this.getSchoolPerformance(learnerWhere),
     ]);
 
-    return {
+    // --------------------------------------------------
+    // RESPONSE
+    // --------------------------------------------------
+
+    const data = {
       summary: {
         totalSchools,
         totalLearners,
@@ -153,6 +248,7 @@ export class DashboardService {
         mandatoryCourses,
 
         certifiedLearners: certificationStatus.certified,
+
         overdueLearners,
       },
 
@@ -164,8 +260,11 @@ export class DashboardService {
 
       schoolPerformance,
     };
+    return {
+      message: 'Dashboard retrived successfully',
+      data,
+    };
   }
-
   private async getRoleWiseCompletion(learnerWhere: Prisma.LearnerWhereInput) {
     const roles = await this.prisma.learnerRole.findMany({
       where: {
@@ -375,12 +474,18 @@ export class DashboardService {
       };
     });
   }
+
   async getOverdueLearners(query: OverdueLearnerQueryDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 10;
+
     const skip = (page - 1) * limit;
 
     const now = new Date();
+
+    // --------------------------------------------------
+    // LEARNER FILTER
+    // --------------------------------------------------
 
     const where: Prisma.LearnerWhereInput = {
       ...(query.search && {
@@ -418,6 +523,7 @@ export class DashboardService {
         departmentId: query.departmentId,
       }),
 
+      // Only learners having at least one overdue enrollment
       enrollments: {
         some: {
           completedAt: null,
@@ -429,20 +535,26 @@ export class DashboardService {
       },
     };
 
-    const [total, learners] = await Promise.all([
-      this.prisma.learner.count({
+    // --------------------------------------------------
+    // TOTAL
+    // --------------------------------------------------
+
+    const total = await this.prisma.learner.count({
+      where,
+    });
+
+    // --------------------------------------------------
+    // PROGRESS SORTING
+    // --------------------------------------------------
+    // Progress is calculated from learner.progress,
+    // so we cannot use Prisma orderBy directly.
+    // Therefore fetch all matching learners first,
+    // calculate progress, sort, then paginate.
+    // --------------------------------------------------
+
+    if (query.sortBy === 'progress') {
+      const learners = await this.prisma.learner.findMany({
         where,
-      }),
-
-      this.prisma.learner.findMany({
-        where,
-
-        skip,
-        take: limit,
-
-        orderBy: {
-          name: 'asc',
-        },
 
         select: {
           id: true,
@@ -504,8 +616,234 @@ export class DashboardService {
             },
           },
         },
-      }),
-    ]);
+      });
+
+      // --------------------------------------------------
+      // CALCULATE DATA
+      // --------------------------------------------------
+
+      const data = learners.map((learner) => {
+        const overdueCourses = learner.enrollments;
+
+        const overdueCourseIds = new Set(
+          overdueCourses.map((enrollment) => enrollment.courseId),
+        );
+
+        const courseProgress = learner.progress.filter((progress) =>
+          overdueCourseIds.has(progress.lesson.module.courseId),
+        );
+
+        const progress =
+          courseProgress.length > 0
+            ? Math.round(
+                courseProgress.reduce(
+                  (sum, item) => sum + Number(item.percentage ?? 0),
+                  0,
+                ) / courseProgress.length,
+              )
+            : 0;
+
+        return {
+          id: learner.id,
+
+          name: learner.name,
+
+          email: learner.email,
+
+          employeeId: learner.employeeId,
+
+          role: learner.learnerRole
+            ? {
+                id: learner.learnerRole.id,
+                name: learner.learnerRole.name,
+                code: learner.learnerRole.code,
+              }
+            : null,
+
+          school: learner.school
+            ? {
+                id: learner.school.id,
+                name: learner.school.name,
+              }
+            : null,
+
+          department: learner.department
+            ? {
+                id: learner.department.id,
+                name: learner.department.name,
+              }
+            : null,
+
+          status: 'OVERDUE',
+
+          progress,
+
+          overdueCourses: overdueCourses.length,
+
+          dueDates: overdueCourses.map((enrollment) => enrollment.dueDate),
+        };
+      });
+
+      // --------------------------------------------------
+      // SORT BY PROGRESS
+      // --------------------------------------------------
+
+      data.sort((a, b) => {
+        if (query.sortOrder === 'desc') {
+          return b.progress - a.progress;
+        }
+
+        return a.progress - b.progress;
+      });
+
+      // --------------------------------------------------
+      // PAGINATION AFTER SORT
+      // --------------------------------------------------
+
+      const paginatedData = data.slice(skip, skip + limit);
+
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        message: 'Overdue learners retrieved successfully',
+
+        items: paginatedData,
+
+        meta: {
+          page,
+          limit,
+          total,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPreviousPage: page > 1,
+        },
+      };
+    }
+
+    // --------------------------------------------------
+    // NORMAL DATABASE SORTING
+    // --------------------------------------------------
+
+    const sortOrder: Prisma.SortOrder = query.sortOrder ?? 'asc';
+
+    let orderBy: Prisma.LearnerOrderByWithRelationInput = {
+      name: 'asc',
+    };
+
+    switch (query.sortBy) {
+      case 'name':
+        orderBy = {
+          name: sortOrder,
+        };
+        break;
+
+      case 'role':
+        orderBy = {
+          learnerRole: {
+            name: sortOrder,
+          },
+        };
+        break;
+
+      case 'school':
+        orderBy = {
+          school: {
+            name: sortOrder,
+          },
+        };
+        break;
+
+      case 'department':
+        orderBy = {
+          department: {
+            name: sortOrder,
+          },
+        };
+        break;
+
+      default:
+        orderBy = {
+          name: 'asc',
+        };
+    }
+
+    // --------------------------------------------------
+    // FETCH LEARNERS
+    // --------------------------------------------------
+
+    const learners = await this.prisma.learner.findMany({
+      where,
+
+      skip,
+      take: limit,
+
+      orderBy,
+
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        employeeId: true,
+
+        learnerRole: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+
+        school: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+
+        department: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+
+        enrollments: {
+          where: {
+            completedAt: null,
+            dueDate: {
+              not: null,
+              lt: now,
+            },
+          },
+
+          select: {
+            id: true,
+            courseId: true,
+            dueDate: true,
+          },
+        },
+
+        progress: {
+          select: {
+            percentage: true,
+
+            lesson: {
+              select: {
+                module: {
+                  select: {
+                    courseId: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // --------------------------------------------------
+    // RESPONSE DATA
+    // --------------------------------------------------
 
     const data = learners.map((learner) => {
       const overdueCourses = learner.enrollments;
@@ -568,9 +906,16 @@ export class DashboardService {
         dueDates: overdueCourses.map((enrollment) => enrollment.dueDate),
       };
     });
+
+    // --------------------------------------------------
+    // PAGINATION META
+    // --------------------------------------------------
+
     const totalPages = Math.ceil(total / limit);
 
     return {
+      message: 'Overdue learners retrieved successfully',
+
       items: data,
 
       meta: {
@@ -581,6 +926,374 @@ export class DashboardService {
         hasNextPage: page < totalPages,
         hasPreviousPage: page > 1,
       },
+    };
+  }
+
+  async getOverdueLearnerById(learnerId: string) {
+    const now = new Date();
+
+    // --------------------------------------------------
+    // 1. GET LEARNER
+    // --------------------------------------------------
+
+    const learner = await this.prisma.learner.findUnique({
+      where: {
+        id: learnerId,
+      },
+
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        employeeId: true,
+        status: true,
+
+        learnerRole: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+
+        department: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+
+        school: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            board: true,
+          },
+        },
+
+        // ------------------------------------------------
+        // ALL PROGRESS
+        // ------------------------------------------------
+
+        progress: {
+          select: {
+            percentage: true,
+
+            lesson: {
+              select: {
+                moduleId: true,
+
+                module: {
+                  select: {
+                    courseId: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+
+        // ------------------------------------------------
+        // OVERDUE ENROLLMENTS
+        // ------------------------------------------------
+
+        enrollments: {
+          where: {
+            completedAt: null,
+
+            dueDate: {
+              not: null,
+              lt: now,
+            },
+          },
+
+          orderBy: {
+            dueDate: 'asc',
+          },
+
+          select: {
+            id: true,
+            courseId: true,
+            enrolledAt: true,
+            completedAt: true,
+            dueDate: true,
+
+            course: {
+              select: {
+                id: true,
+                title: true,
+
+                categories: {
+                  select: {
+                    category: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // --------------------------------------------------
+    // 2. VALIDATE LEARNER
+    // --------------------------------------------------
+
+    if (!learner) {
+      throw new NotFoundException('Learner not found');
+    }
+
+    // --------------------------------------------------
+    // 3. VALIDATE OVERDUE COURSES
+    // --------------------------------------------------
+
+    if (learner.enrollments.length === 0) {
+      throw new NotFoundException('No overdue courses found for this learner');
+    }
+
+    const overdueCourseIds = learner.enrollments.map(
+      (enrollment) => enrollment.courseId,
+    );
+
+    // --------------------------------------------------
+    // 4. GET QUIZ ATTEMPTS FOR OVERDUE COURSES
+    // --------------------------------------------------
+
+    const quizAttempts = await this.prisma.quizAttempt.findMany({
+      where: {
+        learnerId: learnerId,
+
+        completed: true,
+
+        score: {
+          not: null,
+        },
+
+        quiz: {
+          courseId: {
+            in: overdueCourseIds,
+          },
+        },
+      },
+
+      orderBy: {
+        completedAt: 'desc',
+      },
+
+      select: {
+        id: true,
+        score: true,
+        completedAt: true,
+
+        quiz: {
+          select: {
+            id: true,
+            courseId: true,
+
+            questions: {
+              select: {
+                marks: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // --------------------------------------------------
+    // 5. CALCULATE COURSE DETAILS
+    // --------------------------------------------------
+
+    const courses = learner.enrollments.map((enrollment) => {
+      // ----------------------------------------------
+      // COURSE PROGRESS
+      // ----------------------------------------------
+
+      const courseProgress = learner.progress.filter(
+        (progress) => progress.lesson.module.courseId === enrollment.courseId,
+      );
+
+      const progress =
+        courseProgress.length > 0
+          ? Math.round(
+              courseProgress.reduce(
+                (sum, item) => sum + Number(item.percentage ?? 0),
+                0,
+              ) / courseProgress.length,
+            )
+          : 0;
+
+      // ----------------------------------------------
+      // QUIZ ATTEMPT
+      // ----------------------------------------------
+
+      const attempt = quizAttempts.find(
+        (item) => item.quiz.courseId === enrollment.courseId,
+      );
+
+      let assessmentScore: number | null = null;
+      let assessmentScorePercentage: number | null = null;
+
+      if (attempt?.score !== null && attempt?.score !== undefined) {
+        assessmentScore = Number(attempt.score);
+
+        const totalMarks = attempt.quiz.questions.reduce(
+          (sum, question) => sum + Number(question.marks ?? 0),
+          0,
+        );
+
+        if (totalMarks > 0) {
+          assessmentScorePercentage = Math.round(
+            (assessmentScore / totalMarks) * 100,
+          );
+        }
+      }
+
+      // ----------------------------------------------
+      // DAYS OVERDUE
+      // ----------------------------------------------
+
+      const daysOverdue = enrollment.dueDate
+        ? Math.max(
+            0,
+            Math.floor(
+              (now.getTime() - enrollment.dueDate.getTime()) /
+                (1000 * 60 * 60 * 24),
+            ),
+          )
+        : 0;
+
+      return {
+        enrollmentId: enrollment.id,
+
+        courseId: enrollment.courseId,
+
+        course: enrollment.course.title,
+
+        learningCategory:
+          enrollment.course.categories[0]?.category.name ?? null,
+
+        dueDate: enrollment.dueDate,
+
+        daysOverdue,
+
+        status: 'OVERDUE',
+
+        progress,
+
+        assessmentScore,
+
+        assessmentScorePercentage,
+      };
+    });
+
+    // --------------------------------------------------
+    // 6. OVERALL PROGRESS
+    // --------------------------------------------------
+
+    const overallProgress =
+      learner.progress.length > 0
+        ? Math.round(
+            learner.progress.reduce(
+              (sum, item) => sum + Number(item.percentage ?? 0),
+              0,
+            ) / learner.progress.length,
+          )
+        : 0;
+
+    // --------------------------------------------------
+    // 7. OVERALL ASSESSMENT
+    // --------------------------------------------------
+
+    const assessments = courses.filter(
+      (course) =>
+        course.assessmentScore !== null &&
+        course.assessmentScorePercentage !== null,
+    );
+
+    let overallAssessmentScore: number | null = null;
+    let overallAssessmentScorePercentage: number | null = null;
+
+    if (assessments.length > 0) {
+      const totalScore = assessments.reduce(
+        (sum, course) => sum + Number(course.assessmentScore ?? 0),
+        0,
+      );
+
+      const totalPercentage = assessments.reduce(
+        (sum, course) => sum + Number(course.assessmentScorePercentage ?? 0),
+        0,
+      );
+
+      overallAssessmentScore =
+        Math.round((totalScore / assessments.length) * 10) / 10;
+
+      overallAssessmentScorePercentage = Math.round(
+        totalPercentage / assessments.length,
+      );
+    }
+
+    // --------------------------------------------------
+    // 8. FINAL RESPONSE
+    // --------------------------------------------------
+
+    const data = {
+      id: learner.id,
+
+      name: learner.name,
+
+      email: learner.email,
+
+      phone: learner.phone,
+
+      employeeId: learner.employeeId,
+
+      status: 'OVERDUE',
+
+      role: learner.learnerRole
+        ? {
+            id: learner.learnerRole.id,
+            name: learner.learnerRole.name,
+            code: learner.learnerRole.code,
+          }
+        : null,
+
+      department: learner.department
+        ? {
+            id: learner.department.id,
+            name: learner.department.name,
+          }
+        : null,
+
+      school: learner.school
+        ? {
+            id: learner.school.id,
+            name: learner.school.name,
+            code: learner.school.code,
+            board: learner.school.board,
+          }
+        : null,
+
+      overallProgress,
+
+      overallAssessmentScore,
+
+      overallAssessmentScorePercentage,
+
+      overdueCourseCount: courses.length,
+
+      overdueCourses: courses,
+    };
+    return {
+      message: 'Overdue learner retrived successfully',
+      data,
     };
   }
 }

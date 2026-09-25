@@ -214,7 +214,10 @@ export class LearnersService {
       select: this.select,
     });
 
-    return learner;
+    return {
+      message: 'Learner created successfully',
+      data: learner,
+    };
   }
 
   async findAll(
@@ -490,9 +493,7 @@ export class LearnersService {
 
     return {
       message: 'Learners retrieved successfully',
-
       items,
-
       meta: {
         page,
         limit,
@@ -830,7 +831,7 @@ export class LearnersService {
       // Response
       // ==================================================
 
-      return {
+      const data = {
         id: learner.id,
 
         name: learner.name,
@@ -877,6 +878,10 @@ export class LearnersService {
         isOverdue,
 
         courses,
+      };
+      return {
+        message: 'Learner retrived successfully',
+        data,
       };
     } catch (err) {
       console.error('Error fetching learner:', err);
@@ -1139,7 +1144,7 @@ export class LearnersService {
     // --------------------------------------------------
     // 9. Update learner
     // --------------------------------------------------
-    return this.prisma.learner.update({
+    const learner = await this.prisma.learner.update({
       where: {
         id,
       },
@@ -1148,12 +1153,16 @@ export class LearnersService {
 
       select: this.select,
     });
+    return {
+      message: 'Learner updated successfully',
+      data: learner,
+    };
   }
 
   async remove(id: string, adminRole: string, adminSchoolId: string | null) {
     await this.findOne(id, adminRole, adminSchoolId);
 
-    await this.prisma.learner.delete({
+    const data = await await this.prisma.learner.delete({
       where: {
         id,
       },
@@ -1161,6 +1170,7 @@ export class LearnersService {
 
     return {
       message: 'Learner deleted successfully',
+      data,
     };
   }
 

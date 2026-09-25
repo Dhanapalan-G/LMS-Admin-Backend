@@ -134,7 +134,10 @@ export class CoursesService {
           },
         });
       }
-      return course;
+      return {
+        message: 'Course created successfully',
+        data: course,
+      };
     });
   }
 
@@ -349,7 +352,7 @@ export class CoursesService {
     // RESPONSE
     // ==================================================
 
-    return {
+    const data = {
       summary: {
         totalCourses,
         publishedCourses,
@@ -367,6 +370,10 @@ export class CoursesService {
         hasNextPage: page < totalPages,
         hasPreviousPage: page > 1,
       },
+    };
+    return {
+      message: 'Courses retrived successfully',
+      data,
     };
   }
 
@@ -472,7 +479,7 @@ export class CoursesService {
     // Response
     // --------------------------------------------
 
-    return {
+    const data = {
       id: course.id,
       code: course.code,
       title: course.title,
@@ -515,6 +522,10 @@ export class CoursesService {
 
       createdAt: course.createdAt,
       updatedAt: course.updatedAt,
+    };
+    return {
+      message: 'Courses retrived successfully',
+      data,
     };
   }
 
@@ -680,7 +691,7 @@ export class CoursesService {
       // ------------------------------------------
       // 7. Return updated course
       // ------------------------------------------
-      return tx.course.findUnique({
+      const data = await tx.course.findUnique({
         where: {
           id,
         },
@@ -732,6 +743,11 @@ export class CoursesService {
           },
         },
       });
+
+      return {
+        message: 'Courses updated successfully',
+        data,
+      };
     });
   }
 
@@ -760,15 +776,15 @@ export class CoursesService {
       );
     }
 
-    await this.prisma.course.delete({
+    const data = await this.prisma.course.delete({
       where: {
         id,
       },
     });
 
     return {
-      success: true,
       message: 'Course deleted successfully',
+      data,
     };
   }
 

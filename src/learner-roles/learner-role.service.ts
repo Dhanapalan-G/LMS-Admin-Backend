@@ -140,13 +140,18 @@ export class LearnerRolesService {
       // 5. Return response
       // --------------------------------------------------------
 
-      return {
+      const data = {
         id: learnerRole.id,
         name: learnerRole.name,
         code: learnerRole.code,
         isActive: learnerRole.isActive,
 
         schools: learnerRole.schoolMappings.map((mapping) => mapping.school),
+      };
+
+      return {
+        message: 'Learner role created successfully',
+        data,
       };
     });
   }
@@ -250,6 +255,7 @@ export class LearnerRolesService {
     const totalPages = Math.ceil(total / limit);
 
     return {
+      message: 'Learner roles retervied successfully',
       items: roles.map((role) => ({
         id: role.id,
         name: role.name,
@@ -373,7 +379,7 @@ export class LearnerRolesService {
       ),
     ).length;
 
-    return {
+    const data = {
       id: learnerRole.id,
       name: learnerRole.name,
       code: learnerRole.code,
@@ -393,6 +399,10 @@ export class LearnerRolesService {
       ),
 
       overallCompletion: completionPercentage,
+    };
+    return {
+      message: 'Learner role retrived successfully',
+      data,
     };
   }
 
@@ -594,7 +604,7 @@ export class LearnerRolesService {
     // 6. Response
     // ----------------------------------------------------------
 
-    return {
+    const data = {
       id: updated.id,
       name: updated.name,
       code: updated.code,
@@ -604,6 +614,10 @@ export class LearnerRolesService {
 
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,
+    };
+    return {
+      message: 'Learner role updated successfully',
+      data,
     };
   }
 
@@ -655,7 +669,7 @@ export class LearnerRolesService {
       }
     }
 
-    return this.prisma.learnerRole.update({
+    const data = await this.prisma.learnerRole.update({
       where: {
         id,
       },
@@ -671,5 +685,10 @@ export class LearnerRolesService {
         isActive: true,
       },
     });
+
+    return {
+      message: 'Learner deleted successfully',
+      data,
+    };
   }
 }

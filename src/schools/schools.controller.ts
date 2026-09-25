@@ -52,7 +52,7 @@ export class SchoolsController {
     schema: {
       example: {
         success: true,
-        message: 'Request successful',
+        message: 'School created successfully',
         data: {
           id: 'school-id',
           name: 'St. Xavier School',
@@ -105,7 +105,7 @@ export class SchoolsController {
     schema: {
       example: {
         success: true,
-        message: 'Request successful',
+        message: 'School updated successfully',
         data: {
           id: 'school-id',
           name: 'St. Xavier School',
@@ -223,7 +223,7 @@ export class SchoolsController {
     schema: {
       example: {
         success: true,
-        message: 'Request successful',
+        message: 'School retrieved successfully',
         data: {
           id: 'school-id',
           name: 'SBOA School & Junior College, Chennai',
@@ -316,7 +316,7 @@ export class SchoolsController {
     schema: {
       example: {
         success: true,
-        message: 'Request successful',
+        message: 'School deleted successfully',
         data: {
           id: 'school-id',
           name: 'St. Xavier School',

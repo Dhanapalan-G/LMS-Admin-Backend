@@ -16,6 +16,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { AuthTypeGuard } from '../auth/guards/auth-type.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminRole } from '../generated/prisma/enums';
+import { IndividualUserReportQueryDto } from './dto/Individual-user-report-query.dto';
 
 @ApiTags('Admin - Reports')
 @ApiBearerAuth('access-token')
@@ -25,11 +26,12 @@ import { AdminRole } from '../generated/prisma/enums';
 @Controller('api/v1/admin/reports')
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
+
   @Get('school-wise')
   @ApiOperation({
     summary: 'Get school-wise learning report',
     description:
-      'Returns school-wise learning performance including learners, assigned courses, assigned modules, completion, in-progress, not-started, overdue learning, average quiz score and completion percentage. Supports multi-select filtering by schools, learner roles, departments, learning categories, courses, completion status and certification status.',
+      'Returns school-wise learning performance including learners, assigned courses, assigned modules, completion, in-progress, not-started, overdue learning, average quiz score and completion percentage. Supports multi-select filtering and column-wise sorting.',
   })
   @ApiQuery({
     name: 'fromDate',
@@ -58,7 +60,8 @@ export class ReportsController {
     name: 'schoolIds',
     required: false,
     type: [String],
-    description: 'Filter by one or more school IDs.',
+    description:
+      'Filter by one or more school IDs. A single school ID is also supported.',
     example: [
       '550e8400-e29b-41d4-a716-446655440000',
       '550e8400-e29b-41d4-a716-446655440003',
@@ -68,7 +71,8 @@ export class ReportsController {
     name: 'roleIds',
     required: false,
     type: [String],
-    description: 'Filter by one or more learner role IDs.',
+    description:
+      'Filter by one or more learner role IDs. A single role ID is also supported.',
     example: [
       '550e8400-e29b-41d4-a716-446655440001',
       '550e8400-e29b-41d4-a716-446655440005',
@@ -78,37 +82,40 @@ export class ReportsController {
     name: 'departmentIds',
     required: false,
     type: [String],
-    description: 'Filter by one or more department IDs.',
+    description:
+      'Filter by one or more department IDs. A single department ID is also supported.',
     example: ['550e8400-e29b-41d4-a716-446655440002'],
   })
   @ApiQuery({
     name: 'categoryIds',
     required: false,
     type: [String],
-    description: 'Filter by one or more learning category IDs.',
+    description:
+      'Filter by one or more learning category IDs. A single category ID is also supported.',
     example: ['550e8400-e29b-41d4-a716-446655440008'],
   })
   @ApiQuery({
     name: 'courseIds',
     required: false,
     type: [String],
-    description: 'Filter by one or more learning course IDs.',
+    description:
+      'Filter by one or more learning course IDs. A single course ID is also supported.',
     example: ['550e8400-e29b-41d4-a716-446655440004'],
   })
   @ApiQuery({
     name: 'completionStatuses',
     required: false,
     type: [String],
-    description: 'Filter by one or more learning completion statuses.',
     enum: ['COMPLETED', 'IN_PROGRESS', 'NOT_STARTED', 'OVERDUE'],
+    description: 'Filter by one or more completion statuses.',
     example: ['COMPLETED', 'IN_PROGRESS'],
   })
   @ApiQuery({
     name: 'certificationStatuses',
     required: false,
     type: [String],
-    description: 'Filter by one or more certification statuses.',
     enum: ['CERTIFIED', 'NOT_CERTIFIED'],
+    description: 'Filter by one or more certification statuses.',
     example: ['CERTIFIED', 'NOT_CERTIFIED'],
   })
   @ApiQuery({
@@ -144,14 +151,15 @@ export class ReportsController {
     required: false,
     type: String,
     example: 'completionPercentage',
-    description: 'Field used to sort school-wise report results.',
+    description: 'Column used for sorting the school-wise report.',
   })
   @ApiQuery({
     name: 'sortOrder',
     required: false,
     enum: ['asc', 'desc'],
     example: 'desc',
-    description: 'Sort direction.',
+    description:
+      'Sort direction. Use asc for ascending or desc for descending.',
   })
   @ApiResponse({
     status: 200,
@@ -184,21 +192,13 @@ export class ReportsController {
               },
 
               users: 180,
-
               assigned: 20,
-
               modulesAssigned: 80,
-
               completed: 150,
-
               inProgress: 20,
-
               notStarted: 10,
-
               overdue: 6,
-
               avgQuiz: 88,
-
               completionPercentage: 89,
             },
 
@@ -211,21 +211,13 @@ export class ReportsController {
               },
 
               users: 210,
-
               assigned: 20,
-
               modulesAssigned: 72,
-
               completed: 171,
-
               inProgress: 24,
-
               notStarted: 15,
-
               overdue: 7,
-
               avgQuiz: 86,
-
               completionPercentage: 82,
             },
           ],
@@ -243,7 +235,6 @@ export class ReportsController {
   async getSchoolWiseReport(@Query() query: ReportQueryDto) {
     return this.reportsService.getSchoolWiseReport(query);
   }
-
   @Get('school-wise/:schoolId')
   @ApiOperation({
     summary: 'Get detailed school-wise report',
@@ -737,5 +728,404 @@ export class ReportsController {
   })
   async getRoleWiseReport(@Query() query: ReportQueryDto) {
     return this.reportsService.getRoleWiseReport(query);
+  }
+
+  @Get('department-wise')
+  @ApiOperation({
+    summary: 'Get department-wise learning report',
+    description:
+      'Returns learning performance grouped by department, including users, assigned courses, completed learning, in-progress learning, not-started learning, overdue learning, average quiz score and completion percentage.',
+  })
+  @ApiQuery({
+    name: 'fromDate',
+    required: false,
+    type: String,
+    format: 'date',
+    example: '2026-01-01',
+    description: 'Start date for the report period.',
+  })
+  @ApiQuery({
+    name: 'toDate',
+    required: false,
+    type: String,
+    format: 'date',
+    example: '2026-12-31',
+    description: 'End date for the report period.',
+  })
+  @ApiQuery({
+    name: 'board',
+    required: false,
+    type: String,
+    example: 'CBSE',
+    description: 'Filter by school board.',
+  })
+  @ApiQuery({
+    name: 'schoolIds',
+    required: false,
+    type: [String],
+    description: 'Filter by one or more school IDs.',
+    example: [
+      '550e8400-e29b-41d4-a716-446655440000',
+      '550e8400-e29b-41d4-a716-446655440003',
+    ],
+  })
+  @ApiQuery({
+    name: 'roleIds',
+    required: false,
+    type: [String],
+    description: 'Filter by one or more learner role IDs.',
+    example: [
+      '550e8400-e29b-41d4-a716-446655440001',
+      '550e8400-e29b-41d4-a716-446655440005',
+    ],
+  })
+  @ApiQuery({
+    name: 'departmentIds',
+    required: false,
+    type: [String],
+    description: 'Filter by one or more department IDs.',
+    example: ['550e8400-e29b-41d4-a716-446655440002'],
+  })
+  @ApiQuery({
+    name: 'categoryIds',
+    required: false,
+    type: [String],
+    description: 'Filter by one or more learning category IDs.',
+    example: ['550e8400-e29b-41d4-a716-446655440008'],
+  })
+  @ApiQuery({
+    name: 'courseIds',
+    required: false,
+    type: [String],
+    description: 'Filter by one or more learning course IDs.',
+    example: ['550e8400-e29b-41d4-a716-446655440004'],
+  })
+  @ApiQuery({
+    name: 'completionStatuses',
+    required: false,
+    type: [String],
+    description: 'Filter by one or more completion statuses.',
+    enum: ['COMPLETED', 'IN_PROGRESS', 'NOT_STARTED', 'OVERDUE'],
+    example: ['COMPLETED', 'IN_PROGRESS'],
+  })
+  @ApiQuery({
+    name: 'certificationStatuses',
+    required: false,
+    type: [String],
+    description: 'Filter by one or more certification statuses.',
+    enum: ['CERTIFIED', 'NOT_CERTIFIED'],
+    example: ['CERTIFIED', 'NOT_CERTIFIED'],
+  })
+  @ApiQuery({
+    name: 'isMandatory',
+    required: false,
+    type: Boolean,
+    example: true,
+    description: 'Filter courses based on whether they are mandatory.',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    example: 'Teacher',
+    description: 'Search learner roles by role name or role code.',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    example: 1,
+    description: 'Page number.',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    example: 5,
+    description: 'Number of records per page. Maximum 100.',
+  })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    type: String,
+    example: 'completionPercentage',
+    description: 'Field used to sort role-wise report results.',
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    enum: ['asc', 'desc'],
+    example: 'desc',
+    description: 'Sort direction.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Department-wise report retrieved successfully.',
+    schema: {
+      example: {
+        success: true,
+        message: 'Department-wise report retrieved successfully',
+        data: {
+          summary: {
+            departments: 6,
+            totalUsers: 513,
+            coursesAssigned: 80,
+            completed: 369,
+            inProgress: 86,
+            notStarted: 58,
+            overdue: 40,
+            avgQuiz: 76,
+          },
+
+          departmentComparison: [
+            {
+              id: 'department-id-1',
+              name: 'Academic',
+              completionPercentage: 76,
+            },
+            {
+              id: 'department-id-2',
+              name: 'Administration',
+              completionPercentage: 61,
+            },
+            {
+              id: 'department-id-3',
+              name: 'HR',
+              completionPercentage: 83,
+            },
+            {
+              id: 'department-id-4',
+              name: 'IT',
+              completionPercentage: 79,
+            },
+            {
+              id: 'department-id-5',
+              name: 'Library',
+              completionPercentage: 44,
+            },
+            {
+              id: 'department-id-6',
+              name: 'Sports',
+              completionPercentage: 54,
+            },
+          ],
+
+          departments: [
+            {
+              id: 'department-id-3',
+              name: 'HR',
+
+              users: 42,
+
+              coursesAssigned: 12,
+
+              completed: 35,
+
+              inProgress: 5,
+
+              notStarted: 2,
+
+              overdue: 1,
+
+              avgQuiz: 88,
+
+              completionPercentage: 83,
+            },
+            {
+              id: 'department-id-4',
+              name: 'IT',
+
+              users: 28,
+
+              coursesAssigned: 16,
+
+              completed: 22,
+
+              inProgress: 4,
+
+              notStarted: 2,
+
+              overdue: 0,
+
+              avgQuiz: 91,
+
+              completionPercentage: 79,
+            },
+            {
+              id: 'department-id-1',
+              name: 'Academic',
+
+              users: 99,
+
+              coursesAssigned: 20,
+
+              completed: 76,
+
+              inProgress: 15,
+
+              notStarted: 8,
+
+              overdue: 2,
+
+              avgQuiz: 84,
+
+              completionPercentage: 76,
+            },
+          ],
+
+          pagination: {
+            page: 1,
+            limit: 5,
+            total: 6,
+            totalPages: 2,
+          },
+        },
+      },
+    },
+  })
+  async getDepartmentWiseReport(@Query() query: ReportQueryDto) {
+    return this.reportsService.getDepartmentWiseReport(query);
+  }
+
+  @Get('individual-users')
+  @ApiOperation({
+    summary: 'Get individual user learning report',
+    description:
+      'Returns a paginated list of learners with their department, learner role, school, learning progress and learning status.',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: 'Search by learner name, employee ID or email.',
+    example: 'Karthik',
+  })
+  @ApiQuery({
+    name: 'schoolId',
+    required: false,
+    type: String,
+    format: 'uuid',
+    description: 'Filter by one school.',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @ApiQuery({
+    name: 'learnerRoleId',
+    required: false,
+    type: String,
+    format: 'uuid',
+    description: 'Filter by one learner role.',
+    example: '550e8400-e29b-41d4-a716-446655440001',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['COMPLETED', 'IN_PROGRESS', 'NOT_STARTED', 'OVERDUE'],
+    description: 'Filter by one learning status.',
+    example: 'IN_PROGRESS',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    example: 1,
+    description: 'Page number.',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    example: 10,
+    description: 'Number of users per page.',
+  })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    type: String,
+    example: 'progress',
+    description:
+      'Sort field. Supported values: name, email, employeeId, progress, status.',
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    enum: ['asc', 'desc'],
+    example: 'desc',
+    description: 'Sort direction.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Individual user report retrieved successfully.',
+    schema: {
+      example: {
+        success: true,
+        message: 'Individual user report retrieved successfully',
+        data: {
+          users: [
+            {
+              id: 'learner-id-1',
+              name: 'Karthik Subramanian',
+              email: 'karthik.s@lms.edu',
+              employeeId: 'EMP010',
+
+              department: {
+                id: 'department-id',
+                name: 'Management',
+              },
+
+              learnerRole: {
+                id: 'role-id',
+                name: 'Prime Member',
+              },
+
+              school: {
+                id: 'school-id',
+                name: 'Sri Vidya Mandir',
+                code: 'SVM001',
+                board: 'CBSE',
+              },
+
+              progress: 90,
+              status: 'IN_PROGRESS',
+            },
+          ],
+
+          pagination: {
+            page: 1,
+            limit: 10,
+            total: 666,
+            totalPages: 67,
+          },
+        },
+      },
+    },
+  })
+  async getIndividualUserReport(
+    @Query()
+    query: IndividualUserReportQueryDto,
+  ) {
+    return this.reportsService.getIndividualUserReport(query);
+  }
+
+  // ============================================================
+  // INDIVIDUAL USER DETAILS
+  // ============================================================
+
+  @Get('individual-users/:learnerId')
+  @ApiOperation({
+    summary: 'Get individual learner report',
+    description:
+      'Returns detailed learning performance of a single learner including courses, modules, progress, quiz scores and certificates.',
+  })
+  @ApiParam({
+    name: 'learnerId',
+    description: 'Learner ID',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Individual learner report retrieved successfully.',
+  })
+  async getIndividualUserReportDetails(@Param('learnerId') learnerId: string) {
+    return this.reportsService.getIndividualUserReportDetails(learnerId);
   }
 }

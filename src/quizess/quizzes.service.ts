@@ -65,12 +65,17 @@ export class QuizzesService {
     // 3. Common quiz creation
     // -------------------------------------------------------
 
-    return this.createQuiz(
+    const data = await this.createQuiz(
       {
         lessonId,
       },
       dto,
     );
+
+    return {
+      message: 'Quiz for lesson created successfully',
+      data,
+    };
   }
 
   // =========================================================
@@ -112,12 +117,17 @@ export class QuizzesService {
     // 3. Common quiz creation
     // -------------------------------------------------------
 
-    return this.createQuiz(
+    const data = await this.createQuiz(
       {
         courseId,
       },
       dto,
     );
+
+    return {
+      message: 'Quiz for course created successfully',
+      data,
+    };
   }
 
   // =========================================================
@@ -435,7 +445,7 @@ export class QuizzesService {
     // 2. Update quiz
     // -------------------------------------------------------
 
-    return this.prisma.quiz.update({
+    const data = await this.prisma.quiz.update({
       where: {
         id: quizId,
       },
@@ -501,10 +511,15 @@ export class QuizzesService {
         updatedAt: true,
       },
     });
+
+    return {
+      message: 'Quiz updated successfully',
+      data,
+    };
   }
 
   async deleteQuiz(quizId: string) {
-    await this.prisma.quiz.update({
+    const data = await this.prisma.quiz.update({
       where: {
         id: quizId,
       },
@@ -515,6 +530,7 @@ export class QuizzesService {
 
     return {
       message: 'Quiz archived successfully',
+      data,
     };
   }
 }

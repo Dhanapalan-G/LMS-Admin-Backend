@@ -10,7 +10,7 @@ export class TokenService {
 
   async generateAccessToken(payload: JwtPayload) {
     const token = await this.jwtService.signAsync(payload, {
-      expiresIn: '12h',
+      expiresIn: '15d',
     });
     return token;
   }
