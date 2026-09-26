@@ -71,7 +71,29 @@ export class DashboardQueryDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
+  @Transform(({ value }) => {
+    if (!value) return undefined;
+
+    if (Array.isArray(value)) {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      } catch {
+        // Treat as a single board value
+      }
+
+      return [value];
+    }
+
+    return [value];
+  })
   boards?: string[];
 
   @ApiPropertyOptional({

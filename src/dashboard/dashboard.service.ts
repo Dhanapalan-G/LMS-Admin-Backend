@@ -16,7 +16,6 @@ export class DashboardService {
     // --------------------------------------------------
     // LEARNER FILTER
     // --------------------------------------------------
-
     const learnerWhere: Prisma.LearnerWhereInput = {
       ...(query.schoolIds?.length && {
         schoolId: {
@@ -265,6 +264,7 @@ export class DashboardService {
       data,
     };
   }
+
   private async getRoleWiseCompletion(learnerWhere: Prisma.LearnerWhereInput) {
     const roles = await this.prisma.learnerRole.findMany({
       where: {
@@ -419,15 +419,15 @@ export class DashboardService {
       notCertified,
     };
   }
-
+  
   private async getSchoolPerformance(learnerWhere: Prisma.LearnerWhereInput) {
     const schools = await this.prisma.school.findMany({
       where: {
         isActive: true,
 
-        ...(learnerWhere.schoolId && {
-          id: learnerWhere.schoolId as string,
-        }),
+        learners: {
+          some: learnerWhere,
+        },
       },
 
       select: {

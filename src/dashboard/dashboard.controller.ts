@@ -69,7 +69,7 @@ export class DashboardController {
   @ApiQuery({
     name: 'boards',
     required: false,
-    type: [String],
+    type: String,
     isArray: true,
     example: ['CBSE', 'Matriculation'],
     description: 'Filter dashboard data by one or more school boards',
