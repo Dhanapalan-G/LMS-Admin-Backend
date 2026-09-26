@@ -19,6 +19,7 @@ import { LearnerRolesModule } from './learner-roles/learner-role.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ReportsModule } from './reports/reports.module';
 import { CertificationsModule } from './certifications/certifications.module';
+import { S3Module } from './common/services/s3.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { CertificationsModule } from './certifications/certifications.module';
     }),
     PrismaModule,
     HealthModule,
+    S3Module,
     AuthModule,
     AdminModule,
     LearnersModule,
